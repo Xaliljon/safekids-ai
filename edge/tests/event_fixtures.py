@@ -104,6 +104,35 @@ def walking_trajectory(frames: int = 35) -> list[BoundingBox]:
     ]
 
 
+def make_candidate(
+    confidence: float,
+    step: int = 0,
+    track_id: object = None,
+    camera_id: str = "cam-1",
+    display_id: int = 1,
+    label: str = "child",
+):  # noqa: ANN201 - test builder
+    """A PotentialFall CandidateEvent with full identity, at timestamp(step)."""
+    from uuid import uuid4 as _uuid4
+
+    from guardian_edge.domain.event import CandidateEvent, CandidateEventType, EventSignal
+
+    result = make_tracking_result(
+        LYING, step, track_id=track_id, label=label, camera_id=camera_id, display_id=display_id
+    )
+    return CandidateEvent(
+        event_id=_uuid4(),
+        event_type=CandidateEventType.POTENTIAL_FALL,
+        camera_id=camera_id,
+        observed_at=result.captured_at,
+        frame_id=result.frame_id,
+        correlation_id=result.correlation_id,
+        confidence=confidence,
+        track=result.tracks[0],
+        signals=(EventSignal("downward_velocity", min(confidence, 1.0), "test signal"),),
+    )
+
+
 def slow_sit_trajectory(frames: int = 35) -> list[BoundingBox]:
     """Gentle descent (sitting down): downward but far below fall velocity."""
     return [
