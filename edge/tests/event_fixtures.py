@@ -133,6 +133,41 @@ def make_candidate(
     )
 
 
+def make_safety_incident(
+    confidence: float = 0.7,
+    severity: object = None,
+    track_id: object = None,
+    camera_id: str = "cam-1",
+    step: int = 0,
+    incident_id: object = None,
+):  # noqa: ANN201 - test builder
+    """A PENDING_REVIEW SafetyIncident with one evidencing candidate."""
+    from uuid import uuid4 as _uuid4
+
+    from guardian_edge.domain.event import CandidateEventType
+    from guardian_edge.domain.incident import SafetyIncident, Severity
+
+    event = make_candidate(confidence, step=step, track_id=track_id, camera_id=camera_id)
+    return SafetyIncident(
+        incident_id=incident_id or _uuid4(),  # type: ignore[arg-type]
+        incident_type=CandidateEventType.POTENTIAL_FALL,
+        camera_id=camera_id,
+        track_id=event.track.track_id,
+        track_display_id=event.track.display_id,
+        severity=severity or Severity.MEDIUM,  # type: ignore[arg-type]
+        risk_confidence=confidence,
+        opened_at=event.observed_at,
+        last_event_at=event.observed_at,
+        correlation_id=event.correlation_id,
+        events=(event,),
+        summary=(
+            f"1 corroborating potential_fall candidate(s) on track "
+            f"#{event.track.display_id}; peak candidate confidence {confidence:.2f}; "
+            f"awaiting human review"
+        ),
+    )
+
+
 def slow_sit_trajectory(frames: int = 35) -> list[BoundingBox]:
     """Gentle descent (sitting down): downward but far below fall velocity."""
     return [
