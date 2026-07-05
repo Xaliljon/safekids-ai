@@ -7,13 +7,15 @@ AI alert (docs/04_AI_ETHICS.md).
 
 ## Status
 
-Placeholder. `pubspec.yaml` pins the stack; the app scaffold (flavors,
-composition root, Clean Architecture feature layout) lands after foundation review.
+✅ **Implemented (Sprint 13):** pairing, realtime notifications over the
+LAN, offline-first cache, incident review with confirm/dismiss. See
+[ARCHITECTURE.md](ARCHITECTURE.md) and [NOTIFICATION_FLOW.md](NOTIFICATION_FLOW.md);
+ADR-0015. 26 tests, 96.6% coverage.
 
 ## Mandated stack (CLAUDE.md)
 
-Riverpod (state + DI) · GoRouter (navigation) · Dio via `guardian_api_client`
-(networking) · Isar (local storage).
+Riverpod (state + DI) · GoRouter (navigation) · Dio + web_socket_channel
+(networking) · Hive (local storage; ADR-0015).
 
 ## Boundary rules
 
