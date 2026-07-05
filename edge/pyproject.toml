@@ -1,6 +1,6 @@
 [project]
 name = "guardian-edge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Guardian Edge Box runtime: camera ingest, local inference, risk detection, event generation. Offline-capable by design."
 requires-python = ">=3.10"  # JetPack 6 ships Python 3.10 — do not raise without checking the Jetson target
 dependencies = [
@@ -11,8 +11,13 @@ dependencies = [
     "pyyaml>=6.0",                   # camera configuration files
     "onnxruntime>=1.20",             # canonical inference backend (ADR-0001 §7)
     "websockets>=13.0",              # device API realtime push (ADR-0015)
+    "psutil>=5.9",                   # health/performance monitoring (ADR-0016)
     # TensorRT comes from the JetPack system image, never from pip.
 ]
+
+[project.scripts]
+guardian-edge = "guardian_edge.main:main"  # production supervisor (systemd ExecStart)
+guardianctl = "guardian_edge.cli:main"     # operator CLI: wizard/diagnose/health/backup
 
 [dependency-groups]
 dev = []  # shared dev tools come from the workspace root
