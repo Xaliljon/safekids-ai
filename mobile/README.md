@@ -7,10 +7,16 @@ AI alert (docs/04_AI_ETHICS.md).
 
 ## Status
 
-✅ **Implemented (Sprint 13):** pairing, realtime notifications over the
-LAN, offline-first cache, incident review with confirm/dismiss. See
-[ARCHITECTURE.md](ARCHITECTURE.md) and [NOTIFICATION_FLOW.md](NOTIFICATION_FLOW.md);
-ADR-0015. 26 tests, 96.6% coverage.
+✅ **Mobile UX 1.0 (Sprint 15):** five-tab production app — dashboard
+(system status, cameras, CPU/RAM, last sync), notification center
+(unread/read/archived, search, filters, date groups, pagination), incident
+review (timeline, signals, evidence, track history), cameras (status, FPS,
+counters, capability-gated restart), box health, pairing wizard (QR +
+manual + trusted devices), settings (theme, uz/ru/en language, sensitivity,
+quiet hours). Offline-first throughout. See
+[ARCHITECTURE.md](ARCHITECTURE.md), [UX_GUIDE.md](UX_GUIDE.md),
+[NOTIFICATION_FLOW.md](NOTIFICATION_FLOW.md); ADR-0015/0016. 86 tests
+incl. goldens.
 
 ## Mandated stack (CLAUDE.md)
 
