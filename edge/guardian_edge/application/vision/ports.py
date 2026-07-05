@@ -11,10 +11,11 @@ Dependencies point inward: this module imports domain only.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from guardian_edge.domain.detection import DetectionResult, ModelDescriptor
+from guardian_edge.domain.detection import BoundingBox, DetectionResult, ModelDescriptor
 from guardian_edge.domain.frame import Frame
 
 
@@ -34,6 +35,60 @@ class Detector(Protocol):
         be processed.
         """
         ...
+
+
+@dataclass(frozen=True, slots=True)
+class RawDetection:
+    """A model output candidate — before thresholding, NMS, and mapping.
+
+    ``label_index`` is model-space (an index into the detector's label
+    list); it becomes a human label only in the DetectionResult mapper.
+    """
+
+    label_index: int
+    confidence: float
+    box: BoundingBox
+
+
+@dataclass(frozen=True, slots=True)
+class PreprocessedFrame:
+    """Named tensors ready for the engine, plus whatever context the
+    matching decoder needs (scale factors, original size, …).
+
+    ``meta`` is produced by a Preprocessor and consumed only by the
+    OutputDecoder of the same model family — the detector core never
+    inspects it.
+    """
+
+    inputs: Mapping[str, Any]
+    meta: Any = None
+
+
+class Preprocessor(Protocol):
+    """Turns a captured frame into the tensors one model family expects."""
+
+    def preprocess(self, frame: Frame) -> PreprocessedFrame:
+        """Raises DetectorError when the frame cannot be converted."""
+        ...
+
+
+class OutputDecoder(Protocol):
+    """Turns one model family's raw output tensors into RawDetections."""
+
+    def decode(self, outputs: Mapping[str, Any], meta: Any) -> Sequence[RawDetection]:
+        """Boxes must come back normalized to [0, 1] in frame space.
+
+        Raises DetectorError when the outputs cannot be decoded.
+        """
+        ...
+
+
+class NonMaxSuppression(Protocol):
+    """Removes duplicate candidates that cover the same object."""
+
+    def suppress(
+        self, candidates: Sequence[RawDetection], iou_threshold: float
+    ) -> list[RawDetection]: ...
 
 
 class OverlayRenderer(Protocol):
