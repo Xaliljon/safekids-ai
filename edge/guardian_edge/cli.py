@@ -232,9 +232,11 @@ def _cmd_health(home: GuardianHome, args: argparse.Namespace) -> int:
         return 0
     print(f"status: {payload.get('status')}   version: {payload.get('version')}")
     host = payload.get("host", {})
+    temperature = host.get("temperature_c")
+    temperature_text = f"{temperature}°C" if temperature is not None else "n/a"
     print(
         f"cpu {host.get('cpu_percent')}%  ram {host.get('memory_percent')}%  "
-        f"disk {host.get('disk_percent')}%  temp {host.get('temperature_c')}°C"
+        f"disk {host.get('disk_percent')}%  temp {temperature_text}"
     )
     for name, component in sorted(payload.get("components", {}).items()):
         status = component.get("status", "?") if isinstance(component, dict) else component
@@ -348,7 +350,7 @@ def _probe_camera_object(camera: Any) -> bool:
     from guardian_edge.infrastructure.camera.rtsp_stream import OpenCvRtspStreamFactory
     from guardian_edge.ops.camera_probe import probe_camera
 
-    print(f"  testing {camera.camera_id} ({camera.redacted_url()}) ...", flush=True)
+    print(f"  testing {camera.camera_id} ({camera.redacted_url}) ...", flush=True)
     result = probe_camera(OpenCvRtspStreamFactory(), camera)
     if result.ok:
         print(

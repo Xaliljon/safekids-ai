@@ -80,6 +80,20 @@ class TestCameraCommands:
         assert code == 1
         assert not (home / "config" / "cameras.yaml").exists()
 
+    def test_probe_output_redacts_credentials(self, monkeypatch, capsys) -> None:
+        """Regression: _probe_camera_object must run for real (redacted_url is a property)."""
+        from camera_fakes import ScriptedStreamFactory, make_camera
+
+        from guardian_edge.infrastructure.camera import rtsp_stream
+        from guardian_edge.ops import camera_probe
+
+        monkeypatch.setattr(rtsp_stream, "OpenCvRtspStreamFactory", ScriptedStreamFactory)
+        monkeypatch.setattr(camera_probe, "DEFAULT_PROBE_FRAMES", 3)
+        assert cli._probe_camera_object(make_camera()) is True
+        out = capsys.readouterr().out
+        assert "***:***@" in out and "secret" not in out
+        assert "connected" in out
+
     def test_test_camera_reports_probe_result(self, home: Path, monkeypatch, capsys) -> None:
         run(home, "add-camera", "--id", "room-1", "--name", "A", "--url", "rtsp://x", "--no-test")
         monkeypatch.setattr(cli, "_probe_camera_object", lambda camera: True)
