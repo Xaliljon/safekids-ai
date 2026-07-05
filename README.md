@@ -49,8 +49,26 @@ Flutter ≥ 3.22, Docker.
 Branch model: `main ← develop ← feature/*` — never commit to `main` directly.
 Commits: [Conventional Commits](https://www.conventionalcommits.org) with component scope, e.g. `feat(edge): …`.
 
+## Deploying a box (pilot)
+
+```sh
+GUARDIAN_HOME=~/guardian ./deploy/install.sh   # one-command install + validation
+guardianctl wizard                              # connect the cameras
+guardianctl diagnose                            # verify every subsystem
+sudo systemctl start guardian-edge              # run (auto-recovering)
+guardianctl health                              # live status, also on :8790/health
+```
+
+Operator handbook: [PILOT_GUIDE.md](PILOT_GUIDE.md). Packaging, requirements,
+and rollback: [deploy/](deploy/).
+
 ## Status
 
-Engineering foundation only — no application logic, AI models, or APIs yet.
-Current phase: completing product discovery docs (`15–20`) and foundational ADRs
-(detector licensing, dataset governance) before feature work begins.
+**Pilot-ready edge box** (Sprint 14, [ADR-0016](adr/ADR-0016-operational-readiness.md)).
+The full on-device chain is implemented and frozen: RTSP cameras → YOLOX-tiny
+detection → ByteTrack tracking → fall-candidate events → human-verified safety
+incidents → local-first notifications → SafeKids Flutter app over the LAN
+Device API — plus the operational layer (installer, supervisor, health,
+diagnostics, watchdog, backup) that lets a kindergarten run it unattended.
+Sprint demo videos live in [GitHub Releases](../../releases). Pending: TensorRT
+on Jetson, audio scope, cloud backend and dashboard (post-pilot).
