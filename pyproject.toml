@@ -71,4 +71,5 @@ addopts = "-ra --strict-markers"
 markers = [
     "integration: requires services from docker/compose.yaml",
     "hardware: requires Guardian Edge Box hardware (Jetson/N100)",
+    "benchmark: performance measurement; requires locally installed models",
 ]
