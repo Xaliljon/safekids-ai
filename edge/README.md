@@ -28,7 +28,8 @@ is **< 1 second**.
 | **Camera service** (capture, discovery, health, recovery) | ✅ Implemented — see [architecture/camera-service.md](../architecture/camera-service.md) |
 | **Vision pipeline** (Detector port, DummyDetector, overlay) | ✅ Foundation — see [architecture/vision-pipeline.md](../architecture/vision-pipeline.md), ADR-0006 |
 | **Inference runtime** (ONNX Runtime engine, loader, registry, validation, metrics) | ✅ Implemented — see [architecture/inference-runtime.md](../architecture/inference-runtime.md), ADR-0008 |
-| Real detectors (compose runtime + pre/post-processing) | Pending (blocked on ADR-0003 detector licensing) |
+| **Detector abstraction** (EngineDetector, thresholds, NMS, mapper, dummy ONNX detector) | ✅ Implemented — model families plug in as a Preprocessor + OutputDecoder pair |
+| Real detection models (YOLO-family or alternative) | Pending (blocked on ADR-0003 detector licensing) |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
 | Storage / sync / device API | Pending |

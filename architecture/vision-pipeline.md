@@ -83,6 +83,41 @@ of the whole causal chain (capture → detections → tracks → risk events →
 notifications → analytics), so any alert can be traced back to the exact
 frame that caused it.
 
+## Detector abstraction (Sprint 5)
+
+`EngineDetector` implements the Detector port for **any** object detection
+model by composing pluggable stages around an `InferenceEngine` (ADR-0008):
+
+```
+preprocess ──> infer ──> decode ──> confidence filter ──> NMS ──> map
+(Preprocessor) (engine)  (OutputDecoder)  (DetectorConfig)  (NonMaxSuppression)  (DetectionResultMapper)
+```
+
+- **A model family contributes exactly two adapters** — a `Preprocessor`
+  (frame → named tensors + geometry `meta`) and an `OutputDecoder` (output
+  tensors + `meta` → normalized `RawDetection`s). Everything else —
+  thresholds, suppression, capping, label resolution, identity stamping —
+  is inherited. The detector core never inspects `meta`; it flows opaquely
+  from a family's preprocessor to its decoder.
+- **`DetectorConfig`** holds labels + thresholds (confidence, NMS IoU,
+  max detections). `DetectorConfig.from_manifest()` reads them from the
+  model's own manifest `metadata` (labels required), with per-deployment
+  keyword overrides winning — thresholds tune without touching models.
+- **`GreedyNms`** is the default `NonMaxSuppression`: class-aware greedy
+  IoU suppression (pure Python; replaceable behind the port). IoU lives on
+  `BoundingBox.intersection_over_union` — tracking will reuse it.
+- **`DetectionResultMapper`** is the single place model-space candidates
+  become domain detections: label indices resolve to names (out-of-range
+  fails loudly — never guess a safety label), and every detection is
+  stamped per ADR-0007.
+- **Generic infrastructure adapters:** `ImagePreprocessor` (BGR uint8 →
+  float32 NCHW [0,1], fixed-size resize or dynamic) and `TensorRowDecoder`
+  (`[1, N, 6]` rows `(x, y, w, h, confidence, class)`), used by the
+  **dummy ONNX detector** (`create_dummy_onnx_detector`) — a synthetic
+  constant-output graph loaded through the real registry → loader → ONNX
+  Runtime path, proving the whole abstraction end-to-end with no YOLO and
+  no real model. A real family later = registry entry + its adapter pair.
+
 ## Overlay renderer
 
 `OpenCvOverlayRenderer` draws on a **copy** of the frame buffer (the original
