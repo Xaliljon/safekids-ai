@@ -46,7 +46,8 @@ flowchart LR
 ```
 ModelLoader.load("fall-detector")            # version optional -> latest
   └─ registry.get(...)        FileSystemModelRegistry
-       ├─ resolve version     <root>/fall-detector/<version>/
+       ├─ resolve version     active pointer first (zoo state.json, ADR-0009),
+       │                      newest semver when never activated
        ├─ parse manifest.json strict; unparseable = untrusted
        ├─ artifact exists?    ModelRegistryError if not
        └─ sha256 verify       declared checksum must match; warn if absent
