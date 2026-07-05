@@ -94,6 +94,20 @@ stack-logs: ## Tail local infrastructure logs
 codegen: ## Regenerate clients/schemas from contracts/ (no-op until contracts exist)
 	./scripts/codegen.sh
 
+# ---------------------------------------------------------------- vision ----
+
+.PHONY: model-yolox
+model-yolox: ## Download and install YOLOX-tiny into ./models (ADR-0003)
+	uv run python -m guardian_edge.tools.install_yolox --dest models
+
+.PHONY: demo-vision
+demo-vision: ## Live RTSP -> detections -> browser demo (needs cameras.yaml + models)
+	uv run python -m guardian_edge.tools.live_demo --cameras edge/config/cameras.yaml --models models
+
+.PHONY: bench
+bench: ## Run performance benchmarks (requires make model-yolox first)
+	uv run pytest edge/tests -q -m benchmark -rs
+
 # ---------------------------------------------------------------- misc ----
 
 .PHONY: clean

@@ -33,6 +33,7 @@ dashboard/build/
 *.keystore
 
 # --- Data (raw datasets never enter git; DVC pointers only) ---
+/models/
 datasets/**
 !datasets/README.md
 !datasets/**/*.dvc
