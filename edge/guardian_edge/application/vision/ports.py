@@ -17,6 +17,7 @@ from typing import Any, Protocol
 
 from guardian_edge.domain.detection import BoundingBox, DetectionResult, ModelDescriptor
 from guardian_edge.domain.frame import Frame
+from guardian_edge.domain.track import TrackingResult
 
 
 class Detector(Protocol):
@@ -89,6 +90,39 @@ class NonMaxSuppression(Protocol):
     def suppress(
         self, candidates: Sequence[RawDetection], iou_threshold: float
     ) -> list[RawDetection]: ...
+
+
+class Tracker(Protocol):
+    """Associates detections across frames into persistent tracks (ADR-0011).
+
+    Called by the vision pipeline once per processed frame, on the single
+    inference worker thread — implementations hold per-camera state and
+    need not be thread-safe. A tracker that raises loses that frame's
+    tracking only; detections still flow.
+    """
+
+    @property
+    def descriptor(self) -> ModelDescriptor:
+        """Identity of the tracking algorithm (traceability, docs/04)."""
+        ...
+
+    def update(self, result: DetectionResult) -> TrackingResult:
+        """Advance tracking with one frame's detections."""
+        ...
+
+
+class TrackConsumer(Protocol):
+    """Receives every tracking result (the future risk engine attaches here)."""
+
+    def __call__(self, result: TrackingResult) -> None: ...
+
+
+class TrackOverlayRenderer(Protocol):
+    """Draws tracking results onto a copy of a frame's pixel buffer."""
+
+    def render(self, frame: Frame, result: TrackingResult, fps: float) -> Any:
+        """Return an annotated copy of ``frame.data``; never mutate the original."""
+        ...
 
 
 class OverlayRenderer(Protocol):

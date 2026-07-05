@@ -19,6 +19,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from guardian_edge.application.vision.ports import (
     AnnotatedFrame,
@@ -26,9 +27,14 @@ from guardian_edge.application.vision.ports import (
     DetectionConsumer,
     Detector,
     OverlayRenderer,
+    TrackConsumer,
+    Tracker,
+    TrackOverlayRenderer,
 )
+from guardian_edge.domain.detection import DetectionResult
 from guardian_edge.domain.errors import VisionConfigurationError
 from guardian_edge.domain.frame import Frame
+from guardian_edge.domain.track import TrackingResult
 
 logger = logging.getLogger(__name__)
 
@@ -45,19 +51,21 @@ class PipelineStats:
     frames_processed: int
     frames_dropped: int
     detector_errors: int
+    tracker_errors: int
     frames_per_second: float
 
 
 class _CameraCounters:
     """Mutable per-camera counters; guarded by the pipeline lock."""
 
-    __slots__ = ("dropped", "errors", "processed", "processed_times", "received")
+    __slots__ = ("dropped", "errors", "processed", "processed_times", "received", "tracker_errors")
 
     def __init__(self) -> None:
         self.received = 0
         self.processed = 0
         self.dropped = 0
         self.errors = 0
+        self.tracker_errors = 0
         self.processed_times: deque[float] = deque()
 
 
@@ -79,16 +87,27 @@ class VisionPipeline:
         detection_consumer: DetectionConsumer,
         overlay_renderer: OverlayRenderer | None = None,
         annotated_consumer: AnnotatedFrameConsumer | None = None,
+        tracker: Tracker | None = None,
+        track_consumer: TrackConsumer | None = None,
+        track_overlay_renderer: TrackOverlayRenderer | None = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        if (overlay_renderer is None) != (annotated_consumer is None):
+        if tracker is None and (track_consumer is not None or track_overlay_renderer is not None):
             raise VisionConfigurationError(
-                "overlay_renderer and annotated_consumer must be provided together"
+                "track_consumer/track_overlay_renderer require a tracker"
+            )
+        any_renderer = overlay_renderer is not None or track_overlay_renderer is not None
+        if any_renderer != (annotated_consumer is not None):
+            raise VisionConfigurationError(
+                "a renderer and annotated_consumer must be provided together"
             )
         self._detector = detector
         self._detection_consumer = detection_consumer
         self._overlay_renderer = overlay_renderer
         self._annotated_consumer = annotated_consumer
+        self._tracker = tracker
+        self._track_consumer = track_consumer
+        self._track_overlay_renderer = track_overlay_renderer
         self._clock = clock
 
         self._lock = threading.Lock()
@@ -159,6 +178,7 @@ class VisionPipeline:
                     frames_processed=c.processed,
                     frames_dropped=c.dropped,
                     detector_errors=c.errors,
+                    tracker_errors=c.tracker_errors,
                     frames_per_second=round(
                         sum(1 for t in c.processed_times if t >= now - FPS_WINDOW_SECONDS)
                         / FPS_WINDOW_SECONDS,
@@ -197,6 +217,19 @@ class VisionPipeline:
             )
             return
 
+        tracking_result: TrackingResult | None = None
+        if self._tracker is not None:
+            try:
+                tracking_result = self._tracker.update(result)
+            except Exception:
+                with self._lock:
+                    self._counters_for(frame.camera_id).tracker_errors += 1
+                logger.exception(
+                    "camera %s: tracker failed on frame %d; detections still flow",
+                    frame.camera_id,
+                    frame.sequence,
+                )
+
         fps = self._record_processed(frame.camera_id)
 
         try:
@@ -208,16 +241,44 @@ class VisionPipeline:
                 frame.sequence,
             )
 
-        if self._overlay_renderer is not None and self._annotated_consumer is not None:
+        if tracking_result is not None and self._track_consumer is not None:
             try:
-                image = self._overlay_renderer.render(frame, result, fps)
-                self._annotated_consumer(AnnotatedFrame(frame=frame, result=result, image=image))
+                self._track_consumer(tracking_result)
+            except Exception:
+                logger.exception(
+                    "camera %s: track consumer raised; tracks %d dropped",
+                    frame.camera_id,
+                    frame.sequence,
+                )
+
+        if self._annotated_consumer is not None:
+            try:
+                image = self._render(frame, result, tracking_result, fps)
+                if image is not None:
+                    self._annotated_consumer(
+                        AnnotatedFrame(frame=frame, result=result, image=image)
+                    )
             except Exception:
                 logger.exception(
                     "camera %s: overlay rendering/consumer raised; annotation %d dropped",
                     frame.camera_id,
                     frame.sequence,
                 )
+
+    def _render(
+        self,
+        frame: Frame,
+        result: DetectionResult,
+        tracking_result: TrackingResult | None,
+        fps: float,
+    ) -> Any:
+        # Track overlay wins when tracking succeeded; detection overlay is the
+        # fallback (including frames where the tracker errored).
+        if tracking_result is not None and self._track_overlay_renderer is not None:
+            return self._track_overlay_renderer.render(frame, tracking_result, fps)
+        if self._overlay_renderer is not None:
+            return self._overlay_renderer.render(frame, result, fps)
+        return None
 
     def _record_processed(self, camera_id: str) -> float:
         now = self._clock()
