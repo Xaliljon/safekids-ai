@@ -108,6 +108,12 @@ demo-vision: ## Live RTSP -> detections -> browser demo (needs cameras.yaml + mo
 bench: ## Run performance benchmarks (requires make model-yolox first)
 	uv run pytest edge/tests -q -m benchmark -rs
 
+.PHONY: sprint-video
+sprint-video: ## Record a 30s sprint demo (make sprint-video VIDEO=Sprint-NN-Topic.mp4)
+	uv run python -m guardian_edge.tools.record_demo \
+		--cameras edge/config/cameras.yaml --models models \
+		--duration 30 --output $(VIDEO)
+
 # ---------------------------------------------------------------- misc ----
 
 .PHONY: clean
