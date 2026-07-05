@@ -1,0 +1,18 @@
+[project]
+name = "guardian-common"
+version = "0.1.0"
+description = "Shared Python library: event schemas generated from contracts/, logging, configuration helpers. Depends on no Guardian application."
+requires-python = ">=3.10"
+dependencies = [
+    # pydantic lands together with the first generated schema from contracts/events
+]
+
+[dependency-groups]
+dev = []  # shared dev tools come from the workspace root
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["guardian_common"]
