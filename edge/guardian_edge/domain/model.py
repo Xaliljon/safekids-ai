@@ -9,7 +9,9 @@ manifest, and refuse inputs that disagree with the specs (ADR-0008) —
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
 from guardian_edge.domain.detection import ModelDescriptor
 from guardian_edge.domain.errors import ModelValidationError
@@ -70,6 +72,15 @@ class ModelManifest:
     outputs: tuple[TensorSpec, ...]
     sha256: str | None = None
     """Optional artifact checksum; verified by the registry when present."""
+
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    """Task-specific metadata the runtime never interprets.
+
+    Detection models declare class ``labels`` and may declare default
+    thresholds here (read by ``DetectorConfig.from_manifest``); other tasks
+    put their own keys. Keeps models self-describing without the runtime
+    knowing any task.
+    """
 
     def __post_init__(self) -> None:
         if not self.task.strip():

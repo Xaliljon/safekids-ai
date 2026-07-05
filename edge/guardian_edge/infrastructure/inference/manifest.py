@@ -40,6 +40,9 @@ def load_manifest(path: Path) -> ModelManifest:
 
 def _parse(raw: dict[str, Any]) -> ModelManifest:
     sha256 = raw.get("sha256")
+    metadata = raw.get("metadata", {})
+    if not isinstance(metadata, dict):
+        raise ValueError("'metadata' must be an object")
     return ModelManifest(
         model=ModelDescriptor(name=str(raw["name"]), version=str(raw["version"])),
         task=str(raw["task"]),
@@ -47,6 +50,7 @@ def _parse(raw: dict[str, Any]) -> ModelManifest:
         inputs=_parse_specs(raw["inputs"], kind="inputs"),
         outputs=_parse_specs(raw["outputs"], kind="outputs"),
         sha256=str(sha256) if sha256 is not None else None,
+        metadata=metadata,
     )
 
 

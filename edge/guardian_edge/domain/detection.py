@@ -45,6 +45,18 @@ class BoundingBox:
                 f"box exceeds frame bounds: ({self.x}+{self.width}, {self.y}+{self.height})"
             )
 
+    def intersection_over_union(self, other: BoundingBox) -> float:
+        """IoU with another box, in [0, 1]. Basis for NMS and future tracking."""
+        left = max(self.x, other.x)
+        top = max(self.y, other.y)
+        right = min(self.x + self.width, other.x + other.width)
+        bottom = min(self.y + self.height, other.y + other.height)
+        if right <= left or bottom <= top:
+            return 0.0
+        intersection = (right - left) * (bottom - top)
+        union = self.width * self.height + other.width * other.height - intersection
+        return intersection / union
+
     def to_pixels(self, frame_width: int, frame_height: int) -> tuple[int, int, int, int]:
         """Corner coordinates ``(x1, y1, x2, y2)`` in pixels, clamped to the frame."""
         x1 = round(self.x * frame_width)
