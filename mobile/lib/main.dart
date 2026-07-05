@@ -15,7 +15,22 @@ Future<void> main() async {
   final container = ProviderContainer(
     overrides: [notificationCacheProvider.overrideWithValue(cache)],
   );
-  await container.read(connectionControllerProvider).initialize();
+  final controller = container.read(connectionControllerProvider);
+  await controller.initialize();
+  // Dev bootstrap (demos/tests): auto-pair on first launch when built with
+  // --dart-define=GUARDIAN_BOOTSTRAP=host,port,code — never set in release.
+  const bootstrap = String.fromEnvironment('GUARDIAN_BOOTSTRAP');
+  if (bootstrap.isNotEmpty && controller.box == null) {
+    final parts = bootstrap.split(',');
+    if (parts.length == 3) {
+      await controller.pair(
+        host: parts[0],
+        apiPort: int.parse(parts[1]),
+        code: parts[2],
+        deviceName: 'director-phone',
+      );
+    }
+  }
   runApp(
     UncontrolledProviderScope(
       container: container,
