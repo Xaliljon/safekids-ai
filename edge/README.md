@@ -32,6 +32,7 @@ is **< 1 second**.
 | **Model management** (zoo: atomic installs, license gate, rollback, OTA layout) | ✅ Implemented — see [architecture/model-management.md](../architecture/model-management.md), ADR-0009 |
 | **Real detection model** (YOLOX-tiny, Apache-2.0; live RTSP demo, benchmarks) | ✅ Integrated — `make model-yolox && make demo-vision`; ADR-0003 |
 | **Multi-object tracking** (in-house ByteTrack, persistent ids, lifecycle) | ✅ Implemented — optional pipeline stage; ADR-0011 |
+| **Event engine** (track history → explainable PotentialFall candidates) | ✅ Foundation — see [architecture/event-engine.md](../architecture/event-engine.md), ADR-0012 |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
 | Storage / sync / device API | Pending |
