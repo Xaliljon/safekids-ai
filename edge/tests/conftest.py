@@ -75,3 +75,78 @@ def dynamic_model_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     root = tmp_path_factory.mktemp("models-dynamic")
     install_model(root, DYNAMIC_MODEL_NAME, dynamic=True)
     return root
+
+
+# --- synthetic object detection model (Sprint 5) ---------------------------
+
+DETECTION_MODEL_NAME = "dummy-onnx-detector"
+
+DETECTION_ROWS: list[list[float]] = [
+    # x, y, width, height, confidence, class_index — normalized, top-left
+    [0.10, 0.20, 0.30, 0.30, 0.90, 0],  # strong "person"
+    [0.12, 0.22, 0.30, 0.30, 0.70, 0],  # overlaps the first -> NMS suppresses
+    [0.60, 0.60, 0.20, 0.20, 0.30, 1],  # weak "child" -> confidence filter drops
+]
+
+
+def build_detection_model(path: Path, rows: list[list[float]]) -> None:
+    """Graph with an image input and a constant [1, N, 6] detections output.
+
+    The input is declared (and validated/fed) but unused — the "model"
+    always reports the same detections, which is exactly what a runtime
+    test wants: known output, real ONNX execution.
+    """
+    import numpy as np
+
+    data = np.asarray([rows], dtype=np.float32)
+    constant = helper.make_node(
+        "Constant",
+        [],
+        ["detections"],
+        value=helper.make_tensor(
+            "detections_value", TensorProto.FLOAT, data.shape, data.flatten().tolist()
+        ),
+    )
+    graph = helper.make_graph(
+        [constant],
+        "dummy-detector",
+        [helper.make_tensor_value_info("image", TensorProto.FLOAT, [1, 3, "height", "width"])],
+        [helper.make_tensor_value_info("detections", TensorProto.FLOAT, list(data.shape))],
+    )
+    save(helper.make_model(graph, opset_imports=[helper.make_opsetid("", 17)]), str(path))
+
+
+def install_detection_model(
+    root: Path,
+    rows: list[list[float]] | None = None,
+    metadata: dict[str, Any] | None = None,
+    name: str = DETECTION_MODEL_NAME,
+) -> Path:
+    """Create a registry entry for the synthetic detection model."""
+    rows = rows if rows is not None else DETECTION_ROWS
+    version_dir = root / name / "1.0.0"
+    version_dir.mkdir(parents=True)
+    model_path = version_dir / "model.onnx"
+    build_detection_model(model_path, rows)
+    manifest: dict[str, Any] = {
+        "name": name,
+        "version": "1.0.0",
+        "task": "object-detection",
+        "file": "model.onnx",
+        "sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(),
+        "inputs": [{"name": "image", "dtype": "float32", "shape": [1, 3, None, None]}],
+        "outputs": [{"name": "detections", "dtype": "float32", "shape": [1, len(rows), 6]}],
+        "metadata": metadata
+        if metadata is not None
+        else {"labels": ["person", "child"], "confidence_threshold": 0.5},
+    }
+    (version_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return version_dir
+
+
+@pytest.fixture(scope="session")
+def detection_model_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A registry root containing the synthetic detection model."""
+    root = tmp_path_factory.mktemp("models-detection")
+    install_detection_model(root)
+    return root
