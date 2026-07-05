@@ -1,0 +1,46 @@
+name: ci-edge
+
+on:
+  pull_request:
+    paths:
+      - "edge/**"
+      - "packages/python/**"
+      - "contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-edge.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "edge/**"
+      - "packages/python/**"
+      - "contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          # Matches the JetPack 6 system Python on the Jetson target.
+          python-version: "3.10"
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --all-packages
+      - name: Lint
+        run: |
+          uv run ruff check edge
+          uv run ruff format --check edge
+      - name: Type-check
+        run: uv run mypy edge/guardian_edge
+      - name: Test
+        run: uv run pytest edge/tests
+      - name: Build image (amd64 / N100 target)
+        run: docker build -f edge/Dockerfile .
+
+  # NOTE: TensorRT-on-Jetson inference tests cannot run on GitHub-hosted runners.
+  # A nightly hardware-in-the-loop job on a self-hosted bench Jetson is planned
+  # before pilot deployment (see docs/03_ENGINEERING_PRINCIPLES.md testing rules).

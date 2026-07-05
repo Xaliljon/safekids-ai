@@ -1,0 +1,41 @@
+name: ci-backend
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "packages/python/**"
+      - "contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-backend.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "packages/python/**"
+      - "contracts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --all-packages
+      - name: Lint
+        run: |
+          uv run ruff check backend packages/python
+          uv run ruff format --check backend packages/python
+      - name: Type-check
+        run: uv run mypy backend/app packages/python/guardian_common/guardian_common
+      - name: Test
+        run: uv run pytest backend/tests packages/python/guardian_common/tests
+      - name: Build image
+        run: docker build -f backend/Dockerfile .

@@ -1,0 +1,39 @@
+name: ci-ai
+
+on:
+  pull_request:
+    paths:
+      - "ai/**"
+      - "packages/python/**"
+      - "contracts/models/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-ai.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "ai/**"
+      - "packages/python/**"
+      - "contracts/models/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --all-packages
+      - name: Lint
+        run: |
+          uv run ruff check ai
+          uv run ruff format --check ai
+      - name: Type-check
+        run: uv run mypy ai/guardian_ai
+      - name: Test
+        run: uv run pytest ai/tests

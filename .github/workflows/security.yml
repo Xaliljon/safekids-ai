@@ -1,0 +1,33 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 3 * * 1" # weekly sweep, Monday 03:00 UTC
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so leaked-then-removed secrets are still caught
+      - name: Scan for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  large-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block accidental dataset/model commits (>1 MiB)
+        run: |
+          big=$(find . -path ./.git -prune -o -type f -size +1M -print)
+          if [ -n "$big" ]; then
+            echo "Files over 1 MiB detected — raw data and model weights belong in DVC storage, not git:"
+            echo "$big"
+            exit 1
+          fi

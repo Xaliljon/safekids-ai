@@ -1,0 +1,44 @@
+name: ci-contracts
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/ci-contracts.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "contracts/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate schema syntax
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, sys
+          import yaml  # provided by the runner image
+
+          failed = False
+          for path in pathlib.Path("contracts").rglob("*"):
+              if path.suffix in {".yaml", ".yml"}:
+                  try:
+                      yaml.safe_load(path.read_text())
+                  except yaml.YAMLError as exc:
+                      print(f"INVALID YAML: {path}: {exc}")
+                      failed = True
+              elif path.suffix == ".json":
+                  try:
+                      json.loads(path.read_text())
+                  except json.JSONDecodeError as exc:
+                      print(f"INVALID JSON: {path}: {exc}")
+                      failed = True
+          sys.exit(1 if failed else 0)
+          EOF
+
+      # Once contracts/openapi/v1 holds a real spec, add here:
+      #   - OpenAPI lint (redocly/spectral)
+      #   - breaking-change detection against the base branch (oasdiff)
+      #     -> enforces "never break backward compatibility" (docs/03, API principles)
