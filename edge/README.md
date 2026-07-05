@@ -34,6 +34,7 @@ is **< 1 second**.
 | **Multi-object tracking** (in-house ByteTrack, persistent ids, lifecycle) | ✅ Implemented — optional pipeline stage; ADR-0011 |
 | **Event engine** (track history → explainable PotentialFall candidates) | ✅ Foundation — see [architecture/event-engine.md](../architecture/event-engine.md), ADR-0012 |
 | **Risk engine** (candidates → PENDING_REVIEW SafetyIncidents; human review API) | ✅ Implemented — see [architecture/risk-engine.md](../architecture/risk-engine.md), ADR-0013 |
+| **Notification engine** (incidents → local-first delivered notifications) | ✅ Implemented — see [architecture/notification-engine.md](../architecture/notification-engine.md), ADR-0014 |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
 | Storage / sync / device API | Pending |
