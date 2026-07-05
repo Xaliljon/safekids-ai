@@ -28,3 +28,15 @@ class CameraReadError(CameraError):
 
 class DiscoveryError(GuardianEdgeError):
     """Network camera discovery could not be performed."""
+
+
+class VisionError(GuardianEdgeError):
+    """Base class for vision pipeline errors."""
+
+
+class VisionConfigurationError(VisionError):
+    """A vision component or detection value is configured/constructed invalidly."""
+
+
+class DetectorError(VisionError):
+    """A detector failed to produce a result for a frame."""

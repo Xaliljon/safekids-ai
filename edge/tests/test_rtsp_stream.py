@@ -37,6 +37,8 @@ def test_wraps_images_into_frames_with_metadata() -> None:
     assert (first.sequence, second.sequence) == (1, 2)
     assert first.captured_at.tzinfo is not None, "timestamps must be timezone-aware"
     assert isinstance(first.data, FakeImage)
+    assert first.frame_id != second.frame_id, "every captured frame gets its own identity"
+    assert first.correlation_id != second.correlation_id
 
 
 def test_failed_read_raises_camera_read_error() -> None:
