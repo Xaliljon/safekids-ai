@@ -14,7 +14,7 @@ from typing import Any
 
 from guardian_edge.domain.detection import ModelDescriptor
 from guardian_edge.domain.errors import ModelLoadError, ModelValidationError
-from guardian_edge.domain.model import ModelManifest, TensorSpec
+from guardian_edge.domain.model import ModelCompatibility, ModelManifest, TensorSpec
 
 MANIFEST_FILE_NAME = "manifest.json"
 
@@ -40,6 +40,7 @@ def load_manifest(path: Path) -> ModelManifest:
 
 def _parse(raw: dict[str, Any]) -> ModelManifest:
     sha256 = raw.get("sha256")
+    license_id = raw.get("license")
     metadata = raw.get("metadata", {})
     if not isinstance(metadata, dict):
         raise ValueError("'metadata' must be an object")
@@ -50,7 +51,21 @@ def _parse(raw: dict[str, Any]) -> ModelManifest:
         inputs=_parse_specs(raw["inputs"], kind="inputs"),
         outputs=_parse_specs(raw["outputs"], kind="outputs"),
         sha256=str(sha256) if sha256 is not None else None,
+        license=str(license_id) if license_id is not None else None,
+        compatibility=_parse_compatibility(raw.get("compatibility")),
         metadata=metadata,
+    )
+
+
+def _parse_compatibility(raw: Any) -> ModelCompatibility:
+    if raw is None:
+        return ModelCompatibility()
+    if not isinstance(raw, dict):
+        raise ValueError("'compatibility' must be an object")
+    min_edge_version = raw.get("min_edge_version")
+    return ModelCompatibility(
+        schema=int(raw.get("schema", 1)),
+        min_edge_version=str(min_edge_version) if min_edge_version is not None else None,
     )
 
 

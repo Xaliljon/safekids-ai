@@ -60,3 +60,15 @@ class ModelRegistryError(InferenceError):
 
 class TensorValidationError(InferenceError):
     """An input tensor disagrees with the model's declared contract."""
+
+
+class ModelInstallError(InferenceError):
+    """A model bundle could not be installed into the zoo."""
+
+
+class ModelLicenseError(InferenceError):
+    """A model's license is missing or not allowed on this device."""
+
+
+class ModelCompatibilityError(InferenceError):
+    """A model requires a runtime this device does not provide."""
