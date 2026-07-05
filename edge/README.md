@@ -19,7 +19,7 @@ is **< 1 second**.
 | | `guardian_edge/infrastructure/tracking/` | ByteTrack adapter. |
 | | `guardian_edge/infrastructure/storage/` | Encrypted local event/clip store. |
 | | `guardian_edge/infrastructure/sync/` | **Optional** metadata-only cloud sync. |
-| Presentation | `guardian_edge/api/` | Local device API: health, config, provisioning. |
+| Presentation | `guardian_edge/api/` | Device API: pairing, WebSocket notification push, offline sync, review actions (ADR-0015). |
 
 ## Implementation status
 
@@ -35,9 +35,10 @@ is **< 1 second**.
 | **Event engine** (track history → explainable PotentialFall candidates) | ✅ Foundation — see [architecture/event-engine.md](../architecture/event-engine.md), ADR-0012 |
 | **Risk engine** (candidates → PENDING_REVIEW SafetyIncidents; human review API) | ✅ Implemented — see [architecture/risk-engine.md](../architecture/risk-engine.md), ADR-0013 |
 | **Notification engine** (incidents → local-first delivered notifications) | ✅ Implemented — see [architecture/notification-engine.md](../architecture/notification-engine.md), ADR-0014 |
+| **Device API** (pairing, WebSocket push, offline sync, review actions) | ✅ Implemented — `guardian_edge/api/`; ADR-0015; demo: `uv run python -m guardian_edge.tools.device_demo` |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
-| Storage / sync / device API | Pending |
+| Storage / cloud sync | Pending |
 
 Camera configuration: copy [`config/cameras.example.yaml`](config/cameras.example.yaml)
 and register cameras explicitly; RTSP credentials come from environment
