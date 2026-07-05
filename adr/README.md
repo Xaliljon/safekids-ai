@@ -21,6 +21,8 @@ way it is (docs/03 §9: documentation explains decisions).
 |---|---|---|
 | [ADR-0001](ADR-0001-monorepo-architecture.md) | Monorepo Architecture | Accepted |
 | ADR-0002 | Dashboard technology (folded into ADR-0001 §8) | — |
-| ADR-0003 | Object detector selection & licensing (AGPL risk) | **Needed before first AI code** |
+| ADR-0003 | Object detector selection & licensing (AGPL risk) | **Needed before first real model** |
 | ADR-0004 | Edge/cloud responsibility split | Planned |
 | ADR-0005 | Dataset governance | **Needed before first data collection** |
+| [ADR-0006](ADR-0006-vision-pipeline.md) | Vision Pipeline Architecture | Accepted |
+| [ADR-0007](ADR-0007-detection-identity.md) | Detection Identity and Correlation | Accepted |

@@ -110,6 +110,14 @@ to an operator; registration is always an explicit operator action with an
 explicit RTSP URL. The box never auto-trusts devices found on the network
 (docs/03 security by default; docs/04 human in control).
 
+## Frame identity
+
+Every captured `Frame` mints a `frame_id` (identity of the image — `sequence`
+is only a per-stream counter that resets on reconnect) and a `correlation_id`
+(trace token propagated through every downstream artifact derived from this
+capture). Both are UUIDs generated in the `Frame` constructor, so no capture
+path can forget them. See ADR-0007.
+
 ## Privacy properties
 
 - Frames live in memory only; the camera service never persists video.

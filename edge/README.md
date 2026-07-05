@@ -13,7 +13,8 @@ is **< 1 second**.
 | Domain | `guardian_edge/domain/` | `SafetyEvent`, `Zone`, `Camera`, `RiskLevel` — pure Python, zero framework imports. |
 | Application | `guardian_edge/application/` | Use cases: `DetectFall`, `DetectZoneExit`, `DetectCry`, `RaiseAlert`. |
 | Infrastructure | `guardian_edge/infrastructure/camera/` | RTSP/ONVIF camera session management. |
-| | `guardian_edge/infrastructure/inference/` | `EdgeInferencePipeline` — ONNX Runtime (canonical) and TensorRT (Jetson) backends behind one interface. |
+| | `guardian_edge/infrastructure/inference/` | Model runtime backends — ONNX Runtime (canonical) and TensorRT (Jetson) behind the `InferenceEngine` port. |
+| | `guardian_edge/infrastructure/vision/` | Task-level detectors (`DummyDetector` today) and the OpenCV overlay renderer. |
 | | `guardian_edge/infrastructure/audio/` | Cry-detection audio ingest (scope pending PRD). |
 | | `guardian_edge/infrastructure/tracking/` | ByteTrack adapter. |
 | | `guardian_edge/infrastructure/storage/` | Encrypted local event/clip store. |
@@ -25,7 +26,8 @@ is **< 1 second**.
 | Subsystem | Status |
 |---|---|
 | **Camera service** (capture, discovery, health, recovery) | ✅ Implemented — see [architecture/camera-service.md](../architecture/camera-service.md) |
-| Inference pipeline | Pending |
+| **Vision pipeline** (Detector/InferenceEngine ports, DummyDetector, overlay) | ✅ Foundation — see [architecture/vision-pipeline.md](../architecture/vision-pipeline.md), ADR-0006 |
+| Model backends (ONNX Runtime, TensorRT) | Pending (blocked on ADR-0003 detector licensing) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
 | Storage / sync / device API | Pending |
 
