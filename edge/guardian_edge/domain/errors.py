@@ -40,3 +40,23 @@ class VisionConfigurationError(VisionError):
 
 class DetectorError(VisionError):
     """A detector failed to produce a result for a frame."""
+
+
+class InferenceError(GuardianEdgeError):
+    """Base class for inference runtime errors."""
+
+
+class ModelValidationError(InferenceError):
+    """A model manifest or tensor specification is invalid."""
+
+
+class ModelLoadError(InferenceError):
+    """A model artifact could not be loaded or disagrees with its manifest."""
+
+
+class ModelRegistryError(InferenceError):
+    """A model could not be found or verified in the registry."""
+
+
+class TensorValidationError(InferenceError):
+    """An input tensor disagrees with the model's declared contract."""
