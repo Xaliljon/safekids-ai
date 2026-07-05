@@ -29,3 +29,4 @@ way it is (docs/03 §9: documentation explains decisions).
 | [ADR-0008](ADR-0008-inference-runtime.md) | Inference Runtime Contracts | Accepted |
 | [ADR-0009](ADR-0009-model-management.md) | Model Management and OTA Layout | Accepted |
 | [ADR-0010](ADR-0010-dataset-platform.md) | Dataset Platform | Accepted |
+| [ADR-0011](ADR-0011-multi-object-tracking.md) | Multi-Object Tracking (ByteTrack) | Accepted |

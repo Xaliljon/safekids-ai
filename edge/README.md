@@ -31,6 +31,7 @@ is **< 1 second**.
 | **Detector abstraction** (EngineDetector, thresholds, NMS, mapper, dummy ONNX detector) | ✅ Implemented — model families plug in as a Preprocessor + OutputDecoder pair |
 | **Model management** (zoo: atomic installs, license gate, rollback, OTA layout) | ✅ Implemented — see [architecture/model-management.md](../architecture/model-management.md), ADR-0009 |
 | **Real detection model** (YOLOX-tiny, Apache-2.0; live RTSP demo, benchmarks) | ✅ Integrated — `make model-yolox && make demo-vision`; ADR-0003 |
+| **Multi-object tracking** (in-house ByteTrack, persistent ids, lifecycle) | ✅ Implemented — optional pipeline stage; ADR-0011 |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |
 | Storage / sync / device API | Pending |

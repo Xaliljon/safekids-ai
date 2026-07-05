@@ -146,6 +146,38 @@ live demo (`tools/live_demo.py`) — RTSP cameras → detections → annotated
 MJPEG in the browser, wired purely through `FrameConsumer`,
 `DetectionConsumer`, and `AnnotatedFrameConsumer`.
 
+## Multi-object tracking (Sprint 9, ADR-0011)
+
+Tracking is an **optional pipeline stage** between detection and consumers:
+
+```
+frames ─> detector ─> DetectionResult ─┬─> DetectionConsumer (unchanged)
+                                       ├─> Tracker (ByteTrack) ─> TrackingResult ─> TrackConsumer
+                                       └─> overlay: track renderer wins when tracking ran
+```
+
+- **ByteTrack, in-house and dependency-free** (`infrastructure/tracking/`):
+  constant-velocity Kalman per track + two-stage association — high-
+  confidence detections match first, low-confidence leftovers *rescue*
+  occluded tracks (the BYTE idea). Greedy label-aware IoU assignment
+  (no scipy; ADR-0011 §5).
+- **Lifecycle** `TENTATIVE → CONFIRMED → LOST → REMOVED`: confirmed after
+  3 hits (single-frame false positives never surface), coasts on Kalman
+  prediction through occlusion for up to 30 frames, then removed.
+- **Identity**: `track_id` UUID stable for the track's life + short
+  `display_id` for overlays; every Track embeds its last evidencing
+  `Detection`, and `TrackingResult` propagates `frame_id`/`correlation_id`
+  unchanged (ADR-0007).
+- **Isolation**: a tracker failure loses that frame's tracking only
+  (`PipelineStats.tracker_errors`); detections still flow. No tracker
+  configured ⇒ behavior identical to Sprint 8. Camera service and
+  inference runtime are untouched.
+- **Measured**: p50 0.15 ms / p95 0.17 ms per frame at 12 objects —
+  negligible next to ~15 ms inference; 62 FPS end-to-end holds.
+- `OpenCvTrackOverlayRenderer` draws persistent ids ("#7 person 93%"),
+  one stable color per track, thin gray boxes for LOST (coasting) tracks.
+  Demo/record tools take `--tracking`.
+
 ## Overlay renderer
 
 `OpenCvOverlayRenderer` draws on a **copy** of the frame buffer (the original
