@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:guardian_core/guardian_core.dart';
+import 'package:safekids_mobile/src/application/box_status_api.dart';
 import 'package:safekids_mobile/src/application/device_api.dart';
 import 'package:safekids_mobile/src/application/notification_cache.dart';
 
@@ -68,6 +69,9 @@ const testBox = PairedBox(
 class InMemoryCache implements NotificationCache {
   final Map<String, NotificationMessage> notifications = {};
   final Set<String> readIds = {};
+  final Set<String> archivedIds = {};
+  String? settingsJson;
+  String? healthJson;
   int cursor = 0;
   PairedBox? box;
 
@@ -98,6 +102,118 @@ class InMemoryCache implements NotificationCache {
 
   @override
   Future<Set<String>> loadReadIds() async => {...readIds};
+
+  @override
+  Future<void> clearPairedBox() async => box = null;
+
+  @override
+  Future<void> setArchived(String notificationId, bool archived) async =>
+      archived
+          ? archivedIds.add(notificationId)
+          : archivedIds.remove(notificationId);
+
+  @override
+  Future<Set<String>> loadArchivedIds() async => {...archivedIds};
+
+  @override
+  Future<void> saveSettings(String json) async => settingsJson = json;
+
+  @override
+  Future<String?> loadSettings() async => settingsJson;
+
+  @override
+  Future<void> saveHealthSnapshot(String json) async => healthJson = json;
+
+  @override
+  Future<String?> loadHealthSnapshot() async => healthJson;
+}
+
+/// A realistic `/health` payload (mirrors the Sprint 14 ops wire format).
+Map<String, dynamic> makeHealthJson({
+  String status = 'ok',
+  String cameraStatus = 'healthy',
+  double? cpu = 27.5,
+  Map<String, String> warnings = const {},
+}) {
+  return {
+    'status': status,
+    'version': '0.2.0',
+    'components': {
+      'cameras': {
+        'status': status == 'ok' ? 'ok' : status,
+        'cameras': {'classroom-1': cameraStatus},
+        'fps': {'classroom-1': 6.0},
+      },
+      'inference': {
+        'status': 'ok',
+        'cameras': {
+          'classroom-1': {
+            'fps': 6.0,
+            'processed': 1200,
+            'dropped': 3,
+            'detector_errors': 0,
+            'tracker_errors': 0,
+          },
+        },
+      },
+      'tracking': {'status': 'ok', 'last_latency_ms': 0.4},
+      'risk': {'status': 'ok', 'open_incidents': 0},
+      'notifications': {'status': 'ok', 'delivered': 12, 'queue': 0},
+    },
+    'host': {
+      'cpu_percent': cpu,
+      'memory_percent': 41.0,
+      'memory_used_mb': 3277,
+      'disk_percent': 18.2,
+      'disk_free_gb': 210.5,
+      'temperature_c': 52.0,
+      'uptime_seconds': 90061.0,
+    },
+    'warnings': warnings,
+  };
+}
+
+/// Scriptable health-surface API for dashboard/cameras/health screens.
+class FakeBoxStatusApi implements BoxStatusApi {
+  FakeBoxStatusApi({DateTime Function()? clock})
+      : clock = clock ?? DateTime.now;
+
+  final DateTime Function() clock;
+  Map<String, dynamic> healthJson = makeHealthJson();
+  bool failHealth = false;
+  bool failMetrics = false;
+  Object restartBehavior = const UnsupportedByBoxError('restartCamera');
+  final List<String> restarted = [];
+
+  @override
+  Future<BoxHealth> fetchHealth(String host, {int port = 8790}) async {
+    if (failHealth) {
+      throw Exception('box unreachable');
+    }
+    return BoxHealth.fromJson(healthJson, fetchedAt: clock());
+  }
+
+  @override
+  Future<BoxMetrics> fetchMetrics(String host, {int port = 8790}) async {
+    if (failMetrics) {
+      throw Exception('metrics unreachable');
+    }
+    return BoxMetrics.fromJson({
+      ...healthJson['host'] as Map<String, dynamic>,
+      'inference_fps': 6.0,
+      'tracking_latency_ms': 0.4,
+      'notification_mean_delivery_ms': 12.0,
+    });
+  }
+
+  @override
+  Future<void> restartCamera(PairedBox box, String cameraId) async {
+    restarted.add(cameraId);
+    final behavior = restartBehavior;
+    if (behavior is Exception) {
+      throw behavior;
+    }
+  }
 }
 
 /// Scriptable device API: the test controls connectivity and streams.

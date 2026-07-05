@@ -48,5 +48,28 @@ void main() {
     expect(await cache.loadCursor(), 0);
     expect(await cache.loadReadIds(), isEmpty);
     expect(await cache.loadPairedBox(), isNull);
+    expect(await cache.loadArchivedIds(), isEmpty);
+    expect(await cache.loadSettings(), isNull);
+    expect(await cache.loadHealthSnapshot(), isNull);
+  });
+
+  test('archived ids round-trip and unarchive removes', () async {
+    await cache.setArchived('n-1', true);
+    await cache.setArchived('n-2', true);
+    await cache.setArchived('n-1', false);
+    expect(await cache.loadArchivedIds(), {'n-2'});
+  });
+
+  test('settings and health snapshot round-trip', () async {
+    await cache.saveSettings('{"theme_mode":"dark"}');
+    await cache.saveHealthSnapshot('{"status":"ok"}');
+    expect(await cache.loadSettings(), '{"theme_mode":"dark"}');
+    expect(await cache.loadHealthSnapshot(), '{"status":"ok"}');
+  });
+
+  test('clearPairedBox forgets the trusted box', () async {
+    await cache.savePairedBox(testBox);
+    await cache.clearPairedBox();
+    expect(await cache.loadPairedBox(), isNull);
   });
 }
