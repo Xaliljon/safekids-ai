@@ -9,7 +9,7 @@ import '../application/notification_cache.dart';
 ///
 /// Stores plain JSON strings — no code generation, no schema migration
 /// while the model is young. Boxes: notifications (id -> json), meta
-/// (cursor, paired box, read ids).
+/// (cursor, paired box, read/archived ids, settings, health snapshot).
 class HiveNotificationCache implements NotificationCache {
   HiveNotificationCache._(this._notifications, this._meta);
 
@@ -56,15 +56,48 @@ class HiveNotificationCache implements NotificationCache {
   }
 
   @override
-  Future<void> markRead(String notificationId) async {
-    final ids = await loadReadIds()
-      ..add(notificationId);
-    await _meta.put('read_ids', jsonEncode(ids.toList()));
+  Future<void> clearPairedBox() => _meta.delete('paired_box');
+
+  @override
+  Future<void> markRead(String notificationId) =>
+      _addToIdSet('read_ids', notificationId);
+
+  @override
+  Future<Set<String>> loadReadIds() async => _loadIdSet('read_ids');
+
+  @override
+  Future<void> setArchived(String notificationId, bool archived) async {
+    if (archived) {
+      await _addToIdSet('archived_ids', notificationId);
+    } else {
+      final ids = _loadIdSet('archived_ids')..remove(notificationId);
+      await _meta.put('archived_ids', jsonEncode(ids.toList()));
+    }
   }
 
   @override
-  Future<Set<String>> loadReadIds() async {
-    final raw = _meta.get('read_ids');
+  Future<Set<String>> loadArchivedIds() async => _loadIdSet('archived_ids');
+
+  @override
+  Future<void> saveSettings(String json) => _meta.put('settings', json);
+
+  @override
+  Future<String?> loadSettings() async => _meta.get('settings');
+
+  @override
+  Future<void> saveHealthSnapshot(String json) =>
+      _meta.put('health_snapshot', json);
+
+  @override
+  Future<String?> loadHealthSnapshot() async => _meta.get('health_snapshot');
+
+  Future<void> _addToIdSet(String key, String id) async {
+    final ids = _loadIdSet(key)..add(id);
+    await _meta.put(key, jsonEncode(ids.toList()));
+  }
+
+  Set<String> _loadIdSet(String key) {
+    final raw = _meta.get(key);
     if (raw == null) {
       return <String>{};
     }

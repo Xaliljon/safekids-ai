@@ -73,6 +73,15 @@ class ConnectionController extends ChangeNotifier {
     }
   }
 
+  /// Forget the trusted box: clears local trust and returns to unpaired.
+  /// (Box-side revocation is deleting the device from trusted_devices.json.)
+  Future<void> unpair() async {
+    await _cache.clearPairedBox();
+    _box = null;
+    _retryTimer?.cancel();
+    _setState(BoxConnectionState.unpaired);
+  }
+
   /// Incident details from the box; null when it is no longer open there.
   Future<IncidentDetails?> fetchIncident(String incidentId) async {
     final box = _box;

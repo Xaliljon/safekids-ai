@@ -1,14 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'application/box_status_api.dart';
 import 'application/connection_controller.dart';
 import 'application/device_api.dart';
 import 'application/notification_cache.dart';
 import 'application/notification_repository.dart';
+import 'application/settings_controller.dart';
+import 'application/status_controller.dart';
+import 'infrastructure/dio_box_status_api.dart';
 import 'infrastructure/dio_device_api.dart';
 
-/// Composition root (Riverpod). Tests override [deviceApiProvider] and
-/// [notificationCacheProvider] with fakes; production wiring lives in main().
+/// Composition root (Riverpod). Tests override [deviceApiProvider],
+/// [boxStatusApiProvider] and [notificationCacheProvider] with fakes;
+/// production wiring lives in main().
 final deviceApiProvider = Provider<DeviceApi>((ref) => DioDeviceApi());
+
+final boxStatusApiProvider = Provider<BoxStatusApi>((ref) => DioBoxStatusApi());
 
 final notificationCacheProvider = Provider<NotificationCache>(
   (ref) => throw UnimplementedError('overridden in main()/tests'),
@@ -17,6 +24,10 @@ final notificationCacheProvider = Provider<NotificationCache>(
 final notificationRepositoryProvider =
     ChangeNotifierProvider<NotificationRepository>(
   (ref) => NotificationRepository(ref.watch(notificationCacheProvider)),
+);
+
+final settingsControllerProvider = ChangeNotifierProvider<SettingsController>(
+  (ref) => SettingsController(ref.watch(notificationCacheProvider)),
 );
 
 final connectionControllerProvider =
@@ -28,4 +39,34 @@ final connectionControllerProvider =
     // every repository change (a rebuilt controller would forget the box).
     repository: ref.watch(notificationRepositoryProvider.notifier),
   ),
+);
+
+/// Health poll cadence. Tests override with [Duration.zero] to disable the
+/// periodic timer (flutter_test forbids timers outliving the tree).
+final statusPollIntervalProvider =
+    Provider<Duration>((ref) => const Duration(seconds: 10));
+
+/// Follows the connection: polls the paired box's health surface while a
+/// box is paired, stops when unpaired. The controller keeps the last
+/// snapshot for offline rendering.
+final statusControllerProvider = ChangeNotifierProvider<StatusController>(
+  (ref) {
+    final controller = StatusController(
+      api: ref.watch(boxStatusApiProvider),
+      cache: ref.watch(notificationCacheProvider),
+      pollInterval: ref.watch(statusPollIntervalProvider),
+    );
+    void follow() {
+      final box = ref.read(connectionControllerProvider).box;
+      if (box != null) {
+        controller.start(box.host);
+      } else {
+        controller.stop();
+      }
+    }
+
+    ref.listen(connectionControllerProvider, (_, __) => follow());
+    follow();
+    return controller;
+  },
 );
