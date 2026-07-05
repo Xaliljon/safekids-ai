@@ -321,6 +321,28 @@ Then write code.
 
 ---
 
+# Sprint Demo Videos
+
+Every sprint ends with a ~30 second demo video.
+
+Record
+
+make sprint-video VIDEO=Sprint-NN-Topic.mp4
+
+Publish
+
+GitHub Releases, tag sprint-NN
+
+Naming
+
+Sprint-08-YOLOX.mp4
+
+Sprint-09-Tracking.mp4
+
+These clips become investor pitch material.
+
+---
+
 # Pull Requests
 
 Every PR should answer
