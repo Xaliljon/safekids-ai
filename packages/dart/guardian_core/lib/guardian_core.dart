@@ -5,9 +5,11 @@
 /// strict so a malformed box payload fails loudly, never silently.
 library;
 
+export 'src/box_status.dart';
 export 'src/incident_details.dart';
 export 'src/notification_message.dart';
 export 'src/paired_box.dart';
+export 'src/qr_pairing.dart';
 export 'src/severity.dart';
 
 /// Package version, asserted by the scaffold smoke test.
