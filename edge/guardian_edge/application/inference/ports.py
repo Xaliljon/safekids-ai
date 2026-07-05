@@ -86,9 +86,47 @@ class ModelRegistry(Protocol):
         ...
 
     def get(self, name: str, version: str | None = None) -> RegisteredModel:
-        """Resolve a model by name (latest version when omitted).
+        """Resolve a model by name (active/latest version when omitted).
 
         Raises ModelRegistryError when the model is unknown or fails
         verification (missing artifact, checksum mismatch).
         """
+        ...
+
+
+class ModelZoo(Protocol):
+    """Managed model store: install, activate, roll back (ADR-0009).
+
+    This is the port the OTA update agent drives. Versions are immutable
+    once installed; activation is a pointer switch, so rollback never
+    re-downloads anything.
+    """
+
+    def install(self, bundle_dir: Path, activate: bool = False) -> ModelManifest:
+        """Validate and atomically install a model bundle.
+
+        A bundle is a directory holding ``manifest.json`` plus the artifact
+        it declares. Raises ModelInstallError / ModelLicenseError /
+        ModelCompatibilityError; a refused install leaves no trace.
+        """
+        ...
+
+    def activate(self, name: str, version: str) -> None:
+        """Make a version the one ``ModelRegistry.get(name)`` resolves to."""
+        ...
+
+    def rollback(self, name: str) -> str:
+        """Switch back to the previously active version; returns it."""
+        ...
+
+    def active_version(self, name: str) -> str | None:
+        """The currently active version, if one was ever activated."""
+        ...
+
+    def versions(self, name: str) -> list[str]:
+        """Installed versions, oldest first."""
+        ...
+
+    def remove(self, name: str, version: str) -> None:
+        """Delete an installed version. The active version cannot be removed."""
         ...
