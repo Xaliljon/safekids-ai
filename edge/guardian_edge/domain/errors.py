@@ -42,6 +42,14 @@ class DetectorError(VisionError):
     """A detector failed to produce a result for a frame."""
 
 
+class RiskError(GuardianEdgeError):
+    """Base class for risk engine errors."""
+
+
+class UnknownIncidentError(RiskError):
+    """A referenced incident is not open in this engine."""
+
+
 class InferenceError(GuardianEdgeError):
     """Base class for inference runtime errors."""
 
