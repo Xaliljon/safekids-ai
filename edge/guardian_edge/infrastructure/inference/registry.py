@@ -16,18 +16,19 @@ an engine (docs/03, security by default; models are versioned).
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 
 from guardian_edge.application.inference.ports import RegisteredModel
 from guardian_edge.domain.errors import ModelLoadError, ModelRegistryError
-from guardian_edge.domain.model import ModelManifest
+from guardian_edge.domain.model import ModelManifest, ModelVersion
+from guardian_edge.infrastructure.inference.integrity import sha256_of
 from guardian_edge.infrastructure.inference.manifest import MANIFEST_FILE_NAME, load_manifest
+from guardian_edge.infrastructure.inference.state import read_state
 
 logger = logging.getLogger(__name__)
 
-_HASH_CHUNK_BYTES = 1 << 20  # 1 MiB
+_STAGING_DIR_NAME = ".staging"
 
 
 class FileSystemModelRegistry:
@@ -46,6 +47,8 @@ class FileSystemModelRegistry:
         if not self._root.is_dir():
             return manifests
         for manifest_path in sorted(self._root.glob(f"*/*/{MANIFEST_FILE_NAME}")):
+            if _STAGING_DIR_NAME in manifest_path.parts:
+                continue  # in-flight zoo installs are not available models
             try:
                 manifests.append(load_manifest(manifest_path))
             except ModelLoadError:
@@ -80,10 +83,23 @@ class FileSystemModelRegistry:
             if not version_dir.is_dir():
                 raise ModelRegistryError(f"model '{name}' has no version '{version}'")
             return version_dir
-        versions = [entry for entry in model_dir.iterdir() if entry.is_dir()]
+        # The zoo's activation pointer wins; fall back to newest by semver.
+        state = read_state(model_dir)
+        if state.active is not None:
+            version_dir = model_dir / state.active
+            if not version_dir.is_dir():
+                raise ModelRegistryError(
+                    f"model '{name}': active version '{state.active}' is missing on disk"
+                )
+            return version_dir
+        versions = [
+            entry
+            for entry in model_dir.iterdir()
+            if entry.is_dir() and ModelVersion.try_parse(entry.name) is not None
+        ]
         if not versions:
             raise ModelRegistryError(f"model '{name}' has no versions")
-        return max(versions, key=lambda entry: _version_key(entry.name))
+        return max(versions, key=lambda entry: ModelVersion.parse(entry.name))
 
     def _verify_checksum(self, manifest: ModelManifest, artifact: Path) -> None:
         if manifest.sha256 is None:
@@ -93,18 +109,9 @@ class FileSystemModelRegistry:
                 manifest.model.version,
             )
             return
-        digest = hashlib.sha256()
-        with artifact.open("rb") as handle:
-            while chunk := handle.read(_HASH_CHUNK_BYTES):
-                digest.update(chunk)
-        actual = digest.hexdigest()
+        actual = sha256_of(artifact)
         if actual != manifest.sha256.lower():
             raise ModelRegistryError(
                 f"model {manifest.model.name} v{manifest.model.version}: checksum mismatch "
                 f"(artifact {actual}, manifest {manifest.sha256.lower()}) — refusing to load"
             )
-
-
-def _version_key(version: str) -> tuple[int, ...]:
-    """Order semantic-style versions numerically; non-numeric parts sort lowest."""
-    return tuple(int(part) if part.isdigit() else -1 for part in version.split("."))

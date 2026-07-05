@@ -150,3 +150,35 @@ def detection_model_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     root = tmp_path_factory.mktemp("models-detection")
     install_detection_model(root)
     return root
+
+
+# --- model bundles (Sprint 6, zoo installs) --------------------------------
+
+
+def build_bundle(
+    bundle_dir: Path,
+    name: str = "bundled-model",
+    version: str = "1.0.0",
+    license_id: str | None = "Apache-2.0",
+    with_checksum: bool = True,
+    compatibility: dict[str, Any] | None = None,
+    corrupt_after_hashing: bool = False,
+) -> Path:
+    """Author an installable model bundle directory (manifest + artifact)."""
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    model_path = bundle_dir / "model.onnx"
+    build_identity_model(model_path, dynamic=True)
+    manifest = manifest_dict(
+        name,
+        dynamic=True,
+        sha256=hashlib.sha256(model_path.read_bytes()).hexdigest() if with_checksum else None,
+    )
+    manifest["version"] = version
+    if license_id is not None:
+        manifest["license"] = license_id
+    if compatibility is not None:
+        manifest["compatibility"] = compatibility
+    (bundle_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    if corrupt_after_hashing:
+        model_path.write_bytes(model_path.read_bytes() + b"tampered")
+    return bundle_dir
