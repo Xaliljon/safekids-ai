@@ -1,0 +1,192 @@
+{
+  "@@locale": "en",
+  "appTitle": "Guardian SafeKids",
+  "navDashboard": "Dashboard",
+  "navAlerts": "Alerts",
+  "navCameras": "Cameras",
+  "navHealth": "Health",
+  "navSettings": "Settings",
+
+  "connConnected": "Connected",
+  "connConnecting": "Connecting…",
+  "connOffline": "Offline",
+  "connUnpaired": "Not paired",
+  "offlineBanner": "Offline — showing cached data, reconnecting…",
+
+  "dashSystemStatus": "System status",
+  "statusOk": "All systems normal",
+  "statusDegraded": "Degraded",
+  "statusWarning": "Needs attention",
+  "statusError": "Problem detected",
+  "statusUnknown": "Unknown",
+  "dashConnectedCameras": "Cameras",
+  "dashCamerasOnline": "{online} of {total} online",
+  "@dashCamerasOnline": {
+    "placeholders": {
+      "online": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "dashRecentIncidents": "Recent incidents",
+  "dashNoIncidents": "No incidents — all quiet.",
+  "dashCpu": "CPU",
+  "dashRam": "RAM",
+  "dashLastSync": "Last sync",
+  "dashNever": "never",
+  "justNow": "just now",
+  "minutesAgo": "{minutes} min ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "dashViewAll": "View all",
+  "boxVersion": "Box v{version}",
+  "@boxVersion": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+
+  "alertsTitle": "Notification center",
+  "alertsSearchHint": "Search alerts (camera, track, text)",
+  "tabUnread": "Unread",
+  "tabRead": "Read",
+  "tabArchived": "Archived",
+  "alertsEmpty": "No notifications here — all quiet.",
+  "alertsNoMatches": "Nothing matches your search or filters.",
+  "loadMore": "Load more",
+  "archive": "Archive",
+  "unarchive": "Unarchive",
+  "markAllRead": "Mark all read",
+  "allCameras": "All cameras",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "potentialFall": "Potential fall",
+
+  "severityLow": "Low",
+  "severityMedium": "Medium",
+  "severityHigh": "High",
+  "severityCritical": "Critical",
+  "statusPendingReview": "Pending review",
+  "statusConfirmed": "Confirmed",
+  "statusDismissed": "Dismissed",
+
+  "incidentTitle": "Incident",
+  "incidentTimeline": "Timeline",
+  "incidentSignals": "Signals",
+  "incidentEvidence": "Evidence",
+  "incidentReviewStatus": "Review status",
+  "incidentTrackHistory": "Track history",
+  "confirmAction": "Confirm",
+  "dismissAction": "Dismiss",
+  "confirmQuestion": "Confirm this incident as a real safety event?",
+  "dismissQuestion": "Dismiss this incident as a false alarm?",
+  "reviewNoteHint": "Note (optional)",
+  "decisionRecorded": "Decision recorded on the box.",
+  "decisionFailed": "Could not record the decision — check the connection.",
+  "incidentUnavailableOffline": "Live details unavailable — the box is unreachable. Showing cached notification data.",
+  "evidenceMetadataOnly": "Evidence is metadata only: no images or video ever leave the box. People appear as track numbers, never identities.",
+  "trackNumber": "Track #{number}",
+  "@trackNumber": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "cameraLabel": "Camera",
+  "openedAtLabel": "Opened",
+  "lastEventLabel": "Last event",
+  "confidenceLabel": "Confidence",
+  "riskConfidenceLabel": "Risk confidence",
+  "eventsCount": "{count} corroborating events",
+  "@eventsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "reviewerLabel": "Reviewed by",
+  "notificationsOfIncident": "Notifications of this incident",
+
+  "camerasTitle": "Cameras",
+  "camerasEmpty": "No cameras reported yet — waiting for the box.",
+  "cameraHealthy": "Healthy",
+  "cameraDegraded": "Degraded",
+  "cameraUnhealthy": "Unhealthy",
+  "cameraRecovering": "Recovering",
+  "cameraUnknown": "Unknown",
+  "fpsLabel": "FPS",
+  "latencyLabel": "Latency",
+  "framesProcessed": "Frames processed",
+  "framesDropped": "Frames dropped",
+  "detectorErrors": "Detector errors",
+  "trackerErrors": "Tracker errors",
+  "restartCamera": "Restart camera",
+  "restartUnsupported": "This box version has no remote restart — automatic recovery already restarts crashed cameras and reconnects dropped streams.",
+  "restartFailed": "Restart request failed — check the connection.",
+  "restartRequested": "Restart requested.",
+
+  "healthTitle": "System health",
+  "subsystemsSection": "Subsystems",
+  "hostSection": "Edge box host",
+  "cpuLabel": "CPU",
+  "ramLabel": "RAM",
+  "temperatureLabel": "Temperature",
+  "diskLabel": "Disk",
+  "networkSection": "Network",
+  "uptimeLabel": "Uptime",
+  "diskFreeGb": "{gb} GB free",
+  "@diskFreeGb": {
+    "placeholders": {
+      "gb": {"type": "String"}
+    }
+  },
+  "boxUnreachable": "Box unreachable — showing the last known snapshot.",
+  "noHealthYet": "No health data yet. Pair with a box and make sure it is running.",
+  "boxAddressLabel": "Box address",
+  "warningsSection": "Warnings",
+  "notAvailable": "n/a",
+
+  "pairTitle": "Pair with Guardian Box",
+  "pairIntro": "Pair this phone with the Guardian Box on your local network. Nothing leaves the building — no accounts, no cloud.",
+  "pairScanQr": "Scan QR code",
+  "pairManualEntry": "Enter manually",
+  "pairHostLabel": "Box address (IP)",
+  "pairPortLabel": "Port",
+  "pairCodeLabel": "Pairing code",
+  "pairDeviceNameLabel": "This device name",
+  "pairButton": "Pair",
+  "pairBusy": "Pairing…",
+  "pairQrHint": "Point the camera at the QR code from the box's install report or poster.",
+  "pairQrInvalid": "That QR code is not a Guardian pairing code.",
+  "pairQrFilled": "Box details filled from QR — enter the pairing code shown on the box.",
+  "trustedDevicesTitle": "Trusted devices",
+  "trustedThisDevice": "This device",
+  "trustedBoxLabel": "Paired box",
+  "forgetBox": "Forget this box",
+  "forgetBoxQuestion": "Forget this box? You will need a new pairing code to reconnect. (To revoke this phone on the box, remove it from trusted devices there.)",
+
+  "settingsTitle": "Settings",
+  "themeSection": "Theme",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "languageSection": "Language",
+  "langSystem": "System language",
+  "notifSection": "Notification preferences",
+  "notifEnabled": "In-app alerts",
+  "notifEnabledHint": "Highlight new alerts with a banner and badge.",
+  "sensitivityLabel": "Alert sensitivity",
+  "sensitivityHint": "Minimum severity that raises an alert. Lower = more alerts.",
+  "quietHoursLabel": "Quiet hours",
+  "quietHoursHint": "Soften non-critical alerts during this period.",
+  "quietFrom": "From",
+  "quietTo": "Until",
+  "criticalAlwaysAlerts": "Critical alerts always come through — quiet hours never silence an emergency.",
+  "aboutSection": "About",
+  "privacyNote": "Video never leaves the box. This app receives metadata only.",
+
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "close": "Close"
+}

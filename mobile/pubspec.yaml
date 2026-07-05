@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any  # pinned by flutter_localizations
   # Mandated stack (CLAUDE.md): Riverpod (state/DI), GoRouter (navigation),
   # Dio (networking), Hive (local storage; see ADR-0015).
   flutter_riverpod: ^2.6.1
@@ -20,6 +23,7 @@ dependencies:
   path_provider: ^2.1.5
   guardian_core:
     path: ../packages/dart/guardian_core
+  mobile_scanner: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -28,3 +32,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true  # gen-l10n (lib/l10n/*.arb -> lib/l10n/generated)
