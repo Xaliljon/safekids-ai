@@ -9,7 +9,7 @@ dependencies = [
     "numpy>=1.26",                   # frame pixel buffers (overlay rendering; ships with opencv)
     "defusedxml>=0.7",               # WS-Discovery replies are untrusted network input
     "pyyaml>=6.0",                   # camera configuration files
-    # AI pipeline (later): onnxruntime (canonical backend).
+    "onnxruntime>=1.20",             # canonical inference backend (ADR-0001 §7)
     # TensorRT comes from the JetPack system image, never from pip.
 ]
 

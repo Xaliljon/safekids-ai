@@ -18,7 +18,13 @@ dev = [
     "pre-commit>=4.0",
     "types-pyyaml>=6.0",
     "types-defusedxml>=0.7",
+    "onnx>=1.16",  # tests author tiny synthetic graphs; never a runtime dependency
 ]
+
+# onnxruntime ships no type stubs; isolated behind the InferenceEngine port.
+[[tool.mypy.overrides]]
+module = ["onnxruntime", "onnxruntime.*"]
+ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
 # Shared lint / format / type-check / test configuration.
