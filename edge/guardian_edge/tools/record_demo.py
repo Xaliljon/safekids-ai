@@ -34,7 +34,9 @@ from guardian_edge.domain.detection import DetectionResult
 from guardian_edge.infrastructure.camera.config import load_cameras
 from guardian_edge.infrastructure.camera.rtsp_stream import OpenCvRtspStreamFactory
 from guardian_edge.infrastructure.inference.registry import FileSystemModelRegistry
+from guardian_edge.infrastructure.tracking.bytetrack import ByteTracker
 from guardian_edge.infrastructure.vision.overlay import OpenCvOverlayRenderer
+from guardian_edge.infrastructure.vision.track_overlay import OpenCvTrackOverlayRenderer
 from guardian_edge.infrastructure.vision.yolox import create_yolox_detector
 
 logger = logging.getLogger("record_demo")
@@ -92,6 +94,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fps", type=float, default=10.0, help="output video frame rate")
     parser.add_argument("--output", type=Path, required=True, help="output .mp4 path")
     parser.add_argument("--confidence", type=float, default=None, help="threshold override")
+    parser.add_argument(
+        "--tracking", action="store_true", help="run ByteTrack and record persistent track ids"
+    )
     args = parser.parse_args(argv)
 
     overrides = {} if args.confidence is None else {"confidence_threshold": args.confidence}
@@ -107,8 +112,10 @@ def main(argv: list[str] | None = None) -> int:
     pipeline = VisionPipeline(
         detector=detector,
         detection_consumer=count_detections,
-        overlay_renderer=OpenCvOverlayRenderer(),
+        overlay_renderer=None if args.tracking else OpenCvOverlayRenderer(),
         annotated_consumer=recorder,
+        tracker=ByteTracker() if args.tracking else None,
+        track_overlay_renderer=OpenCvTrackOverlayRenderer() if args.tracking else None,
     )
     service = CameraService(
         stream_factory=OpenCvRtspStreamFactory(),
