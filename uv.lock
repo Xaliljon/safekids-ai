@@ -264,6 +264,9 @@ version = "0.1.0"
 source = { editable = "edge" }
 dependencies = [
     { name = "defusedxml" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "opencv-python-headless" },
     { name = "pyyaml" },
 ]
@@ -271,6 +274,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "defusedxml", specifier = ">=0.7" },
+    { name = "numpy", specifier = ">=1.26" },
     { name = "opencv-python-headless", specifier = ">=4.10" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]

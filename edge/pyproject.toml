@@ -6,6 +6,7 @@ requires-python = ">=3.10"  # JetPack 6 ships Python 3.10 — do not raise witho
 dependencies = [
     # Camera service (Sprint 2):
     "opencv-python-headless>=4.10",  # RTSP capture via FFmpeg; headless — no GUI on the box
+    "numpy>=1.26",                   # frame pixel buffers (overlay rendering; ships with opencv)
     "defusedxml>=0.7",               # WS-Discovery replies are untrusted network input
     "pyyaml>=6.0",                   # camera configuration files
     # AI pipeline (later): onnxruntime (canonical backend).
