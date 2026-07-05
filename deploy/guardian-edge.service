@@ -1,0 +1,30 @@
+# Guardian Edge Box — systemd unit (ADR-0016).
+#
+# Placeholders (@REPO@, @HOME@, @USER@) are substituted by deploy/install.sh.
+# This is the process-level recovery layer: if the whole runtime dies, systemd
+# restarts it. In-process recovery (a single engine thread dying) is handled
+# by the service watchdog inside guardian-edge itself — layered recovery.
+
+[Unit]
+Description=Guardian Edge Box (SafeKids)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+Environment=GUARDIAN_HOME=@HOME@
+WorkingDirectory=@REPO@
+ExecStart=@REPO@/.venv/bin/guardian-edge
+Restart=always
+RestartSec=5
+# Never let a memory leak take down the host: the kernel kills us, systemd restarts us.
+MemoryMax=4G
+# Video never leaves the box; the runtime needs no privileges beyond its home.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=@HOME@
+
+[Install]
+WantedBy=multi-user.target

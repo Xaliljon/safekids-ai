@@ -116,6 +116,29 @@ sprint-video: ## Record a 30s sprint demo (make sprint-video VIDEO=Sprint-NN-Top
 		--cameras edge/config/cameras.yaml --models models \
 		--duration 30 --output $(VIDEO) $(RECORD_FLAGS)
 
+# --------------------------------------------------------------- deploy ----
+
+.PHONY: install
+install: ## One-command Guardian Edge Box install (deploy/install.sh)
+	./deploy/install.sh
+
+.PHONY: stress
+stress: ## Long-running stability/stress simulations (accelerated 24h)
+	uv run pytest edge/tests -q -m stress -rs
+
+.PHONY: release
+release: ## Package a release into dist/ (wheel + build metadata + dependency manifest)
+	rm -rf dist && mkdir -p dist
+	uv build --package guardian-edge --out-dir dist
+	uv export --package guardian-edge --no-dev --no-emit-project --no-hashes > dist/requirements-lock.txt
+	@printf '{\n  "version": "%s",\n  "git_commit": "%s",\n  "git_branch": "%s",\n  "built_utc": "%s",\n  "built_on": "%s"\n}\n' \
+		"$$(uv run guardianctl version | cut -d' ' -f2)" \
+		"$$(git rev-parse HEAD)" \
+		"$$(git rev-parse --abbrev-ref HEAD)" \
+		"$$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+		"$$(uname -sm)" > dist/build-info.json
+	@echo "release artifacts:" && ls -la dist/
+
 # ---------------------------------------------------------------- misc ----
 
 .PHONY: clean
