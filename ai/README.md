@@ -8,7 +8,7 @@ never on the Edge Box.
 
 | Path | Responsibility |
 |---|---|
-| `guardian_ai/datasets/` | Dataset loaders and augmentation **code** (raw data lives in `/datasets` via DVC, never here). |
+| `guardian_ai/datasets/` | ✅ **Dataset platform** (Sprint 7): JSONL annotation format, versioned taxonomy, ethics-bearing manifests, deterministic splits, quality + privacy gates, metrics, immutable registry — see [architecture/dataset-platform.md](../architecture/dataset-platform.md), ADR-0010. Raw data lives in `/datasets` via DVC, never here. |
 | `guardian_ai/training/` | Trainers for the V1 events: fall, zone-exit, cry. |
 | `guardian_ai/evaluation/` | Benchmarks: accuracy, FP/FN rate, latency, robustness — the full ethics-mandated metric set (docs/04). |
 | `guardian_ai/export/` | PyTorch → ONNX (→ TensorRT) export. Emits `model.onnx` + `manifest.json` conforming to `contracts/models`. |
