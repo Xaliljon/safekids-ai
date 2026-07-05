@@ -20,7 +20,7 @@ flowchart LR
     subgraph vision-app [Vision Application]
         VP[VisionPipeline<br/>1-slot mailbox per camera<br/>single worker thread]
         DP[[Detector port]]
-        IE[[InferenceEngine port<br/>ONNX/TensorRT later]]
+        IE[[InferenceEngine port<br/>application/inference, ADR-0008]]
         OP[[OverlayRenderer port]]
     end
     subgraph vision-infra [Vision Infrastructure]

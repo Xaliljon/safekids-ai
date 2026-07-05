@@ -26,3 +26,4 @@ way it is (docs/03 §9: documentation explains decisions).
 | ADR-0005 | Dataset governance | **Needed before first data collection** |
 | [ADR-0006](ADR-0006-vision-pipeline.md) | Vision Pipeline Architecture | Accepted |
 | [ADR-0007](ADR-0007-detection-identity.md) | Detection Identity and Correlation | Accepted |
+| [ADR-0008](ADR-0008-inference-runtime.md) | Inference Runtime Contracts | Accepted |
