@@ -50,6 +50,18 @@ class UnknownIncidentError(RiskError):
     """A referenced incident is not open in this engine."""
 
 
+class NotificationError(GuardianEdgeError):
+    """Base class for notification engine errors."""
+
+
+class IllegalTransitionError(NotificationError):
+    """A notification was asked to make a lifecycle transition that does not exist."""
+
+
+class ChannelDeliveryError(NotificationError):
+    """A notification channel failed to deliver; the engine will retry."""
+
+
 class InferenceError(GuardianEdgeError):
     """Base class for inference runtime errors."""
 
