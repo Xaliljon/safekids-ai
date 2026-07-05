@@ -1,0 +1,16 @@
+name: guardian_api_client
+description: Guardian AI backend API client. GENERATED from contracts/openapi — do not write endpoint code by hand (scripts/codegen.sh).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  # dio lands together with the first generated client (per CLAUDE.md networking choice)
+  guardian_core:
+    path: ../guardian_core
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
