@@ -1,0 +1,20 @@
+# Guardian Edge Box — camera configuration example.
+#
+# Copy to the device (e.g. /etc/guardian/cameras.yaml) and register each
+# camera explicitly. Discovery (OnvifWsDiscovery) can suggest candidates,
+# but an operator always confirms this file — the box never auto-trusts
+# devices found on the network.
+#
+# Credentials are resolved from environment variables at load time.
+# NEVER write usernames or passwords into this file.
+
+cameras:
+  - id: classroom-1-cam-1
+    name: "Classroom 1 — main"
+    location: "Classroom 1"
+    rtsp_url: "rtsp://${CAM1_USER}:${CAM1_PASSWORD}@192.168.10.11:554/Streaming/Channels/101"
+
+  - id: playground-cam-1
+    name: "Playground — east"
+    location: "Playground"
+    rtsp_url: "rtsp://${CAM2_USER}:${CAM2_PASSWORD}@192.168.10.12:554/stream1"
