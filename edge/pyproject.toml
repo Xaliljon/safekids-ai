@@ -10,6 +10,7 @@ dependencies = [
     "defusedxml>=0.7",               # WS-Discovery replies are untrusted network input
     "pyyaml>=6.0",                   # camera configuration files
     "onnxruntime>=1.20",             # canonical inference backend (ADR-0001 §7)
+    "websockets>=13.0",              # device API realtime push (ADR-0015)
     # TensorRT comes from the JetPack system image, never from pip.
 ]
 
