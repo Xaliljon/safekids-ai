@@ -31,3 +31,4 @@ way it is (docs/03 §9: documentation explains decisions).
 | [ADR-0010](ADR-0010-dataset-platform.md) | Dataset Platform | Accepted |
 | [ADR-0011](ADR-0011-multi-object-tracking.md) | Multi-Object Tracking (ByteTrack) | Accepted |
 | [ADR-0012](ADR-0012-event-engine.md) | Event Engine (Candidate Safety Events) | Accepted |
+| [ADR-0013](ADR-0013-risk-engine.md) | Risk Engine (Safety Incidents) | Accepted |
