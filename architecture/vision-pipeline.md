@@ -118,6 +118,34 @@ preprocess ──> infer ──> decode ──> confidence filter ──> NMS �
   Runtime path, proving the whole abstraction end-to-end with no YOLO and
   no real model. A real family later = registry entry + its adapter pair.
 
+## First real detector: YOLOX (Sprint 8, ADR-0003)
+
+`infrastructure/vision/yolox.py` is the first real model family — exactly
+the two adapters the abstraction promised, nothing more:
+
+- **`YoloxPreprocessor`**: official YOLOX contract — aspect-preserving
+  letterbox into the fixed canvas (114-padded), BGR float32 0–255, no
+  normalization. Geometry travels to the decoder via `YoloxMeta`.
+- **`YoloxDecoder`**: grid-decodes raw head output (`[1, N, 85]`, strides
+  8/16/32; xy need grid offsets, wh are log-space) into normalized
+  `RawDetection`s, undoing the letterbox. Grids are cached per input size;
+  a cheap score floor discards background cells before object construction.
+- **`create_yolox_detector(registry)`**: loads `yolox-tiny` through the
+  model zoo/registry (Apache-2.0, pinned SHA-256, manifest authored from
+  the real graph by `tools/install_yolox.py`) and composes the generic
+  `EngineDetector`. Thresholds and the 80 COCO labels come from manifest
+  metadata; SafeKids consumes only `person` today.
+
+Measured on a dev machine (CPU, 416×416): **~15 ms p50 / ~16 ms p95
+inference, ~62 FPS end-to-end through the detector, +32 MB RSS** —
+`make bench` reruns the numbers; hard budget enforcement belongs to the
+bench-Jetson job.
+
+Tools: `make model-yolox` installs the model; `make demo-vision` runs the
+live demo (`tools/live_demo.py`) — RTSP cameras → detections → annotated
+MJPEG in the browser, wired purely through `FrameConsumer`,
+`DetectionConsumer`, and `AnnotatedFrameConsumer`.
+
 ## Overlay renderer
 
 `OpenCvOverlayRenderer` draws on a **copy** of the frame buffer (the original
