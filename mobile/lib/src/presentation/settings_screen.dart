@@ -119,17 +119,24 @@ class SettingsScreen extends ConsumerWidget {
                       : null,
                 ),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (final severity in Severity.values)
-                      Text(
-                        severityLabel(l10n, severity),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: severity == settings.minAlertSeverity
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: severityColor(severity),
+                    for (final (index, severity) in Severity.values.indexed)
+                      Expanded(
+                        child: Text(
+                          severityLabel(l10n, severity),
+                          textAlign: index == 0
+                              ? TextAlign.start
+                              : index == Severity.values.length - 1
+                                  ? TextAlign.end
+                                  : TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: severity == settings.minAlertSeverity
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: severityColor(severity),
+                          ),
                         ),
                       ),
                   ],
