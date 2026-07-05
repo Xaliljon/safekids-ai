@@ -1,0 +1,68 @@
+# Guardian AI — Python workspace root (virtual; not an installable package).
+# Members are synced together with `uv sync --all-packages` (see Makefile).
+
+[tool.uv.workspace]
+members = [
+    "ai",
+    "edge",
+    "backend",
+    "packages/python/guardian_common",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pre-commit>=4.0",
+    "types-pyyaml>=6.0",
+    "types-defusedxml>=0.7",
+]
+
+# ---------------------------------------------------------------------------
+# Shared lint / format / type-check / test configuration.
+# Component pyprojects must NOT redefine these — one style for the whole repo.
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["ai", "edge", "backend", "packages/python/guardian_common"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear (hidden side effects, mutable defaults)
+    "SIM", # flake8-simplify (CLAUDE.md: "Could it be simpler?")
+    "N",   # pep8-naming
+    "S",   # flake8-bandit (security by default)
+    "T20", # no stray print statements — use logging
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101"]  # assert is the point of tests
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+# Checking floor is 3.12 because numpy's stubs use 3.12+ syntax and mypy
+# always parses stubs. The real runtime floor (3.10 on Jetson/JetPack 6) is
+# enforced by ci-edge, which installs and runs the tests on actual 3.10.
+python_version = "3.12"
+strict = true
+pretty = true
+warn_unreachable = true
+ignore_missing_imports = false
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: requires services from docker/compose.yaml",
+    "hardware: requires Guardian Edge Box hardware (Jetson/N100)",
+]
