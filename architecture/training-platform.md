@@ -137,6 +137,14 @@ synthetic dataset → train → evaluate → export → copy the validated ONNX 
 Drive. Every step is the same CLI; the notebook adds no logic. Promotion is
 deliberately not runnable from Colab.
 
+`ai/training/notebooks/model-v1-training.ipynb` (Sprint 19) is the same
+pattern for the first real run: mount Drive → clone the repo → copy the
+*published* `guardian-fall-detection-v1` registry export from Drive →
+train on a T4 with `ai/training/configs/model-v1.yaml` → evaluate →
+error analysis → qualitative export → validated ONNX export → benchmark
+→ COCO-pretrained comparison → mark candidate. Same CLI, same "no zoo
+writes from Colab" rule.
+
 ## Failure recovery
 
 | Failure | Recovery |
@@ -145,15 +153,69 @@ deliberately not runnable from Colab.
 | corrupt/tampered ONNX | sha256 re-check at compat + promotion time rejects it |
 | diverging export | parity check rejects at export time; no manifest written |
 | wrong config key | load fails with the key name; nothing runs |
-| unregistered dataset | `RegistryDataModule` refuses — no loose folders |
+| unregistered dataset | `RegistryDataModule`/`VideoRegistryDataModule` refuses — no loose folders |
 | duplicate zoo version | promotion refuses; bump the version |
+| a real split has tens of thousands of images | `VideoRegistryDataModule.batches()` is lazy (`LazyBatches`) — decodes one batch at a time, O(batch_size) peak memory, never the whole split |
+
+## Sprint 19: the first production model (YOLOX-Tiny)
+
+`yolox-tiny` (`ai/guardian_ai/training/yolox_tiny.py`) is a from-scratch,
+anchor-free, multi-scale `DetectorFamily` — CSPDarknet-tiny-style
+backbone, PAFPN-lite neck, decoupled head over strides 8/16/32 — unlocked
+from Sprint 17's reservation now that the architecture review covers it.
+Target assignment is a **documented simplification** of the paper's
+SimOTA (center-region candidates + nearest-k, not optimal transport); see
+the module's docstring for exactly what differs and why.
+
+Real published video datasets (Sprint 18) export one training image per
+*annotated frame*, not per clip — `guardian-fall-detection-v1`'s 357
+clips are 19,940/1,269/3,692 train/val/test images. Training reads this
+through `VideoRegistryDataModule` (`dataset.format: video`), which
+resolves the dataset via `VideoDatasetRegistry.get()` (checksum-verified)
+and letterboxes each image onto a square canvas matching the model's
+input size, transforming box coordinates through the identical padding.
+
+New evaluation-adjacent modules, all built on the same per-image greedy
+matching `evaluate_detections` already uses (so metrics and diagnostics
+can never quietly disagree):
+
+- `evaluation/error_analysis.py` — top FP/FN images, worst-confidence
+  false positives, worst-localized true positives, most confused class
+  pairs → `error-analysis.json`.
+- `training/qualitative.py` — renders N random predictions (ground truth
+  + predicted boxes, with confidence) on the letterboxed canvas the model
+  actually saw → PNGs.
+- `training/coco_baseline.py` — the mandated "COCO-pretrained vs Guardian
+  model" comparison. Fetches the official Apache-2.0 YOLOX-Tiny COCO
+  checkpoint through the **existing**, already-reviewed
+  `edge/guardian_edge/tools/install_yolox.py` installer (a subprocess
+  call to a sibling app's CLI, not an in-process import — ADR-0001 still
+  holds), decodes its output independently (matching the documented
+  contract, never importing `edge/` code), and evaluates it with our own
+  harness on the same images.
+
+**Candidate, not promoted.** `train/__init__.py`'s `candidate` command
+writes `status: candidate, not_production: true` into `experiment.json`
+and does **nothing else** — no zoo write, no activation. Promotion
+(`promote`) remains a separate, later, human decision. See
+[reports/model-v1/](../reports/model-v1/) for the actual run: a bounded
+256-image/6-epoch local validation (the real 19,940-image/30-epoch spec
+run needs the Colab notebook's GPU) that proves the pipeline end to end
+and — honestly, on real numbers — loses to the COCO baseline, exactly as
+expected at that scale.
 
 ## Testing
 
-167 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,
-`test_export_*`, `test_train_cli.py`, `test_training_workspace.py`) cover
-config validation, the experiment record, registry-only data access,
-smoke training + resume + early stopping + reproducibility, hand-computed
-metrics, report artifacts, export parity + rejection, the full
-compatibility contract, PROMOTE/REJECT verdicts, the promotion gates and
-the CLI end to end on a synthetic dataset. Coverage over the new modules: 97 %.
+348 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,
+`test_export_*`, `test_train_cli*.py`, `test_training_workspace.py`,
+`test_yolox_tiny.py`, `test_video_data.py`, `test_error_analysis.py`,
+`test_qualitative.py`, `test_coco_baseline.py`, `test_model_v1_notebook.py`)
+cover config validation, the experiment record, registry-only data access
+(both formats), smoke training + resume + early stopping +
+reproducibility, hand-computed metrics, report artifacts, export parity +
+rejection, the full compatibility contract, PROMOTE/REJECT verdicts, the
+promotion gates, YOLOX-Tiny's build/loss/assignment/decode/export, lazy
+video batching (including multi-worker determinism and memory bounds),
+error analysis, qualitative export, COCO-baseline decode math, and the
+CLI end to end on synthetic datasets. Coverage over the training/
+evaluation modules: 96 %.
