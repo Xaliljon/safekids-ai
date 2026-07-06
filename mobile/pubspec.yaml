@@ -24,6 +24,7 @@ dependencies:
   guardian_core:
     path: ../packages/dart/guardian_core
   mobile_scanner: ^7.2.0
+  video_player: ^2.11.1
 
 dev_dependencies:
   flutter_test:

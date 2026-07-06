@@ -6,6 +6,7 @@
 library;
 
 export 'src/box_status.dart';
+export 'src/evidence_record.dart';
 export 'src/incident_details.dart';
 export 'src/notification_message.dart';
 export 'src/paired_box.dart';

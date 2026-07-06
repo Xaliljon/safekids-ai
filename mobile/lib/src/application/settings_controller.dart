@@ -18,6 +18,7 @@ class AppSettings {
     this.quietHoursEnabled = false,
     this.quietStartMinutes = 22 * 60,
     this.quietEndMinutes = 7 * 60,
+    this.evidenceCacheMb = 250,
   });
 
   final ThemeMode themeMode;
@@ -36,6 +37,9 @@ class AppSettings {
   /// Minutes from midnight, local time. A range may cross midnight.
   final int quietStartMinutes;
   final int quietEndMinutes;
+
+  /// Offline evidence cache budget (EVIDENCE_UX.md); LRU-evicted beyond it.
+  final int evidenceCacheMb;
 
   Locale? get locale => localeCode == null ? null : Locale(localeCode!);
 
@@ -76,6 +80,7 @@ class AppSettings {
     bool? quietHoursEnabled,
     int? quietStartMinutes,
     int? quietEndMinutes,
+    int? evidenceCacheMb,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -85,6 +90,7 @@ class AppSettings {
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietStartMinutes: quietStartMinutes ?? this.quietStartMinutes,
       quietEndMinutes: quietEndMinutes ?? this.quietEndMinutes,
+      evidenceCacheMb: evidenceCacheMb ?? this.evidenceCacheMb,
     );
   }
 
@@ -96,6 +102,7 @@ class AppSettings {
         'quiet_hours_enabled': quietHoursEnabled,
         'quiet_start_minutes': quietStartMinutes,
         'quiet_end_minutes': quietEndMinutes,
+        'evidence_cache_mb': evidenceCacheMb,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -108,6 +115,7 @@ class AppSettings {
         quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
         quietStartMinutes: json['quiet_start_minutes'] as int? ?? 22 * 60,
         quietEndMinutes: json['quiet_end_minutes'] as int? ?? 7 * 60,
+        evidenceCacheMb: json['evidence_cache_mb'] as int? ?? 250,
       );
 
   static Severity _severityOr(String? wire, Severity fallback) {

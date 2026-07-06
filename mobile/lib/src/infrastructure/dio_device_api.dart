@@ -90,6 +90,45 @@ class DioDeviceApi implements DeviceApi {
             decoded['payload'] as Map<String, dynamic>));
   }
 
+  @override
+  Future<List<EvidenceRecord>> listEvidence(PairedBox box) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      box.apiBase.resolve('/api/v1/evidence').toString(),
+      options: _authorized(box),
+    );
+    return [
+      for (final record in response.data!['evidence'] as List<dynamic>)
+        EvidenceRecord.fromJson(record as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<List<int>> downloadEvidenceVideo(
+    PairedBox box,
+    String evidenceId,
+    String variant, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final response = await _dio.get<List<int>>(
+      box.apiBase
+          .resolve('/api/v1/evidence/$evidenceId/video')
+          .replace(queryParameters: {'variant': variant}).toString(),
+      options: _authorized(box).copyWith(responseType: ResponseType.bytes),
+      onReceiveProgress: onProgress,
+    );
+    return response.data!;
+  }
+
+  @override
+  Future<List<int>> fetchEvidenceThumbnail(
+      PairedBox box, String evidenceId) async {
+    final response = await _dio.get<List<int>>(
+      box.apiBase.resolve('/api/v1/evidence/$evidenceId/thumbnail').toString(),
+      options: _authorized(box).copyWith(responseType: ResponseType.bytes),
+    );
+    return response.data!;
+  }
+
   Options _authorized(PairedBox box) =>
       Options(headers: {'Authorization': 'Bearer ${box.token}'});
 }

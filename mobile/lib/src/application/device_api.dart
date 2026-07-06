@@ -40,4 +40,19 @@ abstract class DeviceApi {
   /// Live notification stream over WebSocket. The stream ends (or errors)
   /// when the connection drops; the caller owns reconnection.
   Stream<NotificationMessage> connect(PairedBox box);
+
+  /// All evidence records on the box (ADR-0017), newest first.
+  Future<List<EvidenceRecord>> listEvidence(PairedBox box);
+
+  /// Downloaded, decrypted-by-the-box clip bytes for one variant
+  /// ('original' | 'overlay'). [onProgress] reports received/total bytes.
+  Future<List<int>> downloadEvidenceVideo(
+    PairedBox box,
+    String evidenceId,
+    String variant, {
+    void Function(int received, int total)? onProgress,
+  });
+
+  /// The evidence poster frame (JPEG bytes).
+  Future<List<int>> fetchEvidenceThumbnail(PairedBox box, String evidenceId);
 }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'application/box_status_api.dart';
 import 'application/connection_controller.dart';
 import 'application/device_api.dart';
+import 'application/evidence_cache.dart';
+import 'application/evidence_controller.dart';
 import 'application/notification_cache.dart';
 import 'application/notification_repository.dart';
 import 'application/settings_controller.dart';
@@ -40,6 +42,26 @@ final connectionControllerProvider =
     repository: ref.watch(notificationRepositoryProvider.notifier),
   ),
 );
+
+/// Offline evidence media store; production wiring lives in main().
+final evidenceCacheProvider = Provider<EvidenceCache>(
+  (ref) => throw UnimplementedError('overridden in main()/tests'),
+);
+
+/// One evidence controller per incident (auto-disposed with the screen).
+final evidenceControllerProvider = ChangeNotifierProvider.autoDispose
+    .family<EvidenceController, String>((ref, incidentId) {
+  final settings = ref.read(settingsControllerProvider).settings;
+  final controller = EvidenceController(
+    api: ref.watch(deviceApiProvider),
+    cache: ref.watch(evidenceCacheProvider),
+    box: ref.read(connectionControllerProvider).box,
+    incidentId: incidentId,
+    cacheLimitBytes: settings.evidenceCacheMb * 1024 * 1024,
+  );
+  controller.initialize();
+  return controller;
+});
 
 /// Health poll cadence. Tests override with [Duration.zero] to disable the
 /// periodic timer (flutter_test forbids timers outliving the tree).
