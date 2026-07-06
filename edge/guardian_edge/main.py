@@ -31,13 +31,20 @@ from guardian_edge.api.server import DeviceApiServer
 from guardian_edge.application.camera_service import CameraService
 from guardian_edge.application.events.engine import EventEngine
 from guardian_edge.application.events.fall import PotentialFallDetector
+from guardian_edge.application.evidence.recorder import EvidenceRecorder
+from guardian_edge.application.evidence.retention import EvidenceRetentionService
 from guardian_edge.application.notifications.engine import NotificationEngine
 from guardian_edge.application.risk.engine import RiskEngine
 from guardian_edge.application.vision.pipeline import VisionPipeline
 from guardian_edge.domain.errors import GuardianEdgeError
+from guardian_edge.domain.frame import Frame
+from guardian_edge.domain.incident import SafetyIncident
 from guardian_edge.domain.track import TrackingResult
 from guardian_edge.infrastructure.camera.config import load_cameras
 from guardian_edge.infrastructure.camera.rtsp_stream import OpenCvRtspStreamFactory
+from guardian_edge.infrastructure.evidence.crypto import EvidenceVault
+from guardian_edge.infrastructure.evidence.rings import FrameRingBuffer, TrackRingBuffer
+from guardian_edge.infrastructure.evidence.store import FileSystemEvidenceStore
 from guardian_edge.infrastructure.inference.registry import FileSystemModelRegistry
 from guardian_edge.infrastructure.notifications.local_push import LocalPushChannel
 from guardian_edge.infrastructure.tracking.bytetrack import ByteTracker
@@ -78,8 +85,14 @@ class Runtime:
     monitor: PerformanceMonitor
     watchdog: ServiceWatchdog
     risk_engine: RiskEngine
+    frame_ring: FrameRingBuffer
+    evidence_recorder: EvidenceRecorder
+    evidence_retention: EvidenceRetentionService
 
     def start(self) -> None:
+        self.frame_ring.start()
+        self.evidence_recorder.start()
+        self.evidence_retention.start()
         self.notification_engine.start()
         self.pipeline.start()
         self.camera_service.start()
@@ -97,6 +110,9 @@ class Runtime:
         self.camera_service.stop()
         self.pipeline.stop()
         self.notification_engine.stop()
+        self.evidence_retention.stop()
+        self.evidence_recorder.stop()
+        self.frame_ring.stop()
         logger.info("guardian edge stopped cleanly")
 
 
@@ -116,11 +132,27 @@ def build_runtime(
     tracking_gauge = _TrackingLatencyGauge()
     channel = LocalPushChannel(home.outbox_dir)
     notification_engine = NotificationEngine(channel)
-    risk_engine = RiskEngine(notification_engine)
+
+    # Evidence platform (ADR-0017): rings + recorder attach through the
+    # existing consumer seams; no frozen engine knows evidence exists.
+    frame_ring = FrameRingBuffer()
+    track_ring = TrackRingBuffer()
+    evidence_store = FileSystemEvidenceStore(
+        home.evidence_dir, EvidenceVault(home.evidence_key_file)
+    )
+    evidence_recorder = EvidenceRecorder(frame_ring, track_ring, evidence_store)
+    evidence_retention = EvidenceRetentionService(evidence_store)
+
+    def on_incident(incident: SafetyIncident) -> None:
+        notification_engine(incident)  # alert first — evidence never delays it
+        evidence_recorder.on_incident(incident)
+
+    risk_engine = RiskEngine(on_incident)
     event_engine = EventEngine([PotentialFallDetector()], risk_engine)
 
     def on_tracking(result: TrackingResult) -> None:
         tracking_gauge.observe(result)
+        track_ring.on_tracking(result)
         event_engine(result)
 
     pipeline = VisionPipeline(
@@ -129,9 +161,14 @@ def build_runtime(
         tracker=ByteTracker(),
         track_consumer=on_tracking,
     )
+
+    def on_frame(frame: Frame) -> None:
+        frame_ring.on_frame(frame)  # constant-time enqueue, never blocks
+        pipeline.on_frame(frame)
+
     camera_service = CameraService(
         stream_factory=OpenCvRtspStreamFactory(),
-        frame_consumer=pipeline.on_frame,
+        frame_consumer=on_frame,
     )
     camera_count = 0
     if home.cameras_file.is_file():
@@ -149,6 +186,7 @@ def build_runtime(
         pairing=pairing,
         api_port=api_port,
         ws_port=ws_port,
+        evidence_store=evidence_store,
     )
 
     watchdog = ServiceWatchdog(
@@ -162,6 +200,16 @@ def build_runtime(
                 _restart(notification_engine),
             ),
             SupervisedService("health-server", thread_alive("health-server"), lambda: None),
+            SupervisedService(
+                "evidence-recorder",
+                thread_alive("evidence-recorder"),
+                _restart(evidence_recorder),
+            ),
+            SupervisedService(
+                "evidence-frame-ring",
+                thread_alive("evidence-frame-ring"),
+                _restart(frame_ring),
+            ),
         ]
     )
 
@@ -176,6 +224,10 @@ def build_runtime(
             "tracking": lambda: {"status": "ok", "last_latency_ms": tracking_gauge.value()},
             "risk": lambda: {"status": "ok", **_risk_status(risk_engine)},
             "notifications": lambda: _notification_status(notification_engine),
+            "evidence": lambda: {
+                **evidence_recorder.stats(),
+                "buffer": frame_ring.stats(),
+            },
         },
         warnings=watchdog.warnings,
         disk_path=home.root,
@@ -202,6 +254,9 @@ def build_runtime(
         monitor=monitor,
         watchdog=watchdog,
         risk_engine=risk_engine,
+        frame_ring=frame_ring,
+        evidence_recorder=evidence_recorder,
+        evidence_retention=evidence_retention,
     )
 
 

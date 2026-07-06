@@ -18,7 +18,16 @@ Protocol v1 (JSON):
   GET  /api/v1/notifications?after=N     Bearer token -> {cursor, notifications: [...]}
   GET  /api/v1/incidents/<id>            Bearer token -> incident + event timeline
   POST /api/v1/incidents/<id>/resolve    Bearer token, {decision, note} -> resolved incident
+  GET  /api/v1/evidence                  Bearer token -> {evidence: [...]}
+  GET  /api/v1/evidence/<id>             Bearer token -> evidence record
+  GET  /api/v1/evidence/<id>/video?variant=original|overlay  Bearer token -> video/mp4
+  GET  /api/v1/evidence/<id>/thumbnail   Bearer token -> image/jpeg
   WS   ws://host:<ws_port>/ws?token=...  frames: {kind: notification, payload: {...}}
+
+Evidence (ADR-0017) is served ONLY to paired trusted devices, decrypted in
+memory per request, and every access is written to the evidence audit
+trail. There is no sharing/export surface — the LAN device API is the only
+door, by design.
 """
 
 from __future__ import annotations
@@ -42,7 +51,13 @@ from websockets.asyncio.server import ServerConnection
 from guardian_edge.api.pairing import PairingManager
 from guardian_edge.application.risk.engine import RiskEngine
 from guardian_edge.domain.errors import UnknownIncidentError, VisionConfigurationError
+from guardian_edge.domain.evidence import ClipVariant, Evidence
 from guardian_edge.domain.incident import SafetyIncident
+from guardian_edge.infrastructure.evidence.crypto import EvidenceCryptoError
+from guardian_edge.infrastructure.evidence.store import (
+    FileSystemEvidenceStore,
+    UnknownEvidenceError,
+)
 from guardian_edge.infrastructure.notifications.local_push import (
     OUTBOX_FILE_NAME,
     LocalPushChannel,
@@ -65,6 +80,11 @@ class RequestContext:
 
 
 _Route = Callable[[RequestContext], tuple[HTTPStatus, dict[str, Any]]]
+_MediaRoute = Callable[[RequestContext], tuple[HTTPStatus, str, bytes]]
+
+
+def _media_error(status: HTTPStatus, message: str) -> tuple[HTTPStatus, str, bytes]:
+    return status, "application/json", json.dumps({"error": message}).encode("utf-8")
 
 
 def serialize_incident(incident: SafetyIncident) -> dict[str, Any]:
@@ -105,6 +125,11 @@ def serialize_incident(incident: SafetyIncident) -> dict[str, Any]:
     }
 
 
+def serialize_evidence(evidence: Evidence) -> dict[str, Any]:
+    """Evidence record for the wire (identifiers + clip facts, no media)."""
+    return evidence.to_dict()
+
+
 class DeviceApiServer:
     """LAN HTTP + WebSocket server for director devices."""
 
@@ -118,10 +143,12 @@ class DeviceApiServer:
         host: str = "0.0.0.0",  # noqa: S104 - the device API must be reachable on the LAN (ADR-0015)
         api_port: int = DEFAULT_API_PORT,
         ws_port: int = DEFAULT_WS_PORT,
+        evidence_store: FileSystemEvidenceStore | None = None,
     ) -> None:
         self._risk_engine = risk_engine
         self._outbox_path = outbox_dir / OUTBOX_FILE_NAME
         self._pairing = pairing
+        self._evidence = evidence_store
         self._box_name = box_name
         self._host = host
         self._api_port = api_port
@@ -261,10 +288,19 @@ class DeviceApiServer:
                     self._json(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
 
             def do_GET(self) -> None:  # noqa: N802 - http.server API
+                clean = urlparse(self.path).path
                 if self.path.startswith("/api/v1/notifications"):
                     self._handle(server._sync)
                 elif self.path.startswith("/api/v1/incidents/"):
                     self._handle(server._incident)
+                elif clean.startswith("/api/v1/evidence/") and clean.endswith("/video"):
+                    self._handle_media(server._evidence_video)
+                elif clean.startswith("/api/v1/evidence/") and clean.endswith("/thumbnail"):
+                    self._handle_media(server._evidence_thumbnail)
+                elif clean.startswith("/api/v1/evidence/"):
+                    self._handle(server._evidence_one)
+                elif clean == "/api/v1/evidence":
+                    self._handle(server._evidence_list)
                 else:
                     self._json(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
 
@@ -281,6 +317,26 @@ class DeviceApiServer:
                     self._json(status, body)
                 except Exception:
                     logger.exception("device API request failed: %s", self.path)
+                    self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "internal error"})
+
+            def _handle_media(self, route: _MediaRoute) -> None:
+                """Like _handle, but the route answers with raw media bytes."""
+                try:
+                    token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+                    if not server._pairing.is_trusted(token):
+                        self._json(HTTPStatus.UNAUTHORIZED, {"error": "unpaired device"})
+                        return
+                    context = RequestContext(path=self.path, token=token, body={})
+                    status, content_type, payload = route(context)
+                    self.send_response(int(status))
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Content-Length", str(len(payload)))
+                    # Evidence never leaves the app: no caching proxies.
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(payload)
+                except Exception:
+                    logger.exception("device API media request failed: %s", self.path)
                     self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "internal error"})
 
             def _body(self) -> dict[str, Any]:
@@ -349,4 +405,97 @@ class DeviceApiServer:
             return HTTPStatus.BAD_REQUEST, {"error": str(exc)}
         except UnknownIncidentError as exc:
             return HTTPStatus.NOT_FOUND, {"error": str(exc)}
+        if self._evidence is not None:
+            # Retention applies the right lifetime once the human decides.
+            self._evidence.update_incident_status(resolved.incident_id, resolved.status)
         return HTTPStatus.OK, serialize_incident(resolved)
+
+    # ---------------------------------------------------- evidence routes
+
+    def _device_name(self, token: str) -> str:
+        device = self._pairing.device_for(token)
+        return device.device_name if device is not None else "unknown-device"
+
+    def _evidence_list(self, request: RequestContext) -> tuple[HTTPStatus, dict[str, Any]]:
+        if self._evidence is None:
+            return HTTPStatus.NOT_FOUND, {"error": "evidence is not enabled on this box"}
+        records = [serialize_evidence(record) for record in self._evidence.list_evidence()]
+        return HTTPStatus.OK, {"evidence": records}
+
+    def _find_evidence(
+        self, request: RequestContext, suffix: str = ""
+    ) -> Evidence | tuple[HTTPStatus, dict[str, Any]]:
+        if self._evidence is None:
+            return HTTPStatus.NOT_FOUND, {"error": "evidence is not enabled on this box"}
+        path = urlparse(request.path).path.removesuffix(suffix).rstrip("/")
+        raw_id = path.rsplit("/", 1)[-1]
+        try:
+            return self._evidence.get(UUID(raw_id))
+        except (ValueError, UnknownEvidenceError):
+            return HTTPStatus.NOT_FOUND, {"error": "unknown evidence"}
+
+    def _evidence_one(self, request: RequestContext) -> tuple[HTTPStatus, dict[str, Any]]:
+        store = self._evidence
+        found = self._find_evidence(request)
+        if not isinstance(found, Evidence) or store is None:
+            return (
+                found
+                if not isinstance(found, Evidence)
+                else (
+                    HTTPStatus.NOT_FOUND,
+                    {"error": "evidence is not enabled on this box"},
+                )
+            )
+        store.audit("read", found.evidence_id, self._device_name(request.token))
+        return HTTPStatus.OK, serialize_evidence(found)
+
+    def _evidence_video(self, request: RequestContext) -> tuple[HTTPStatus, str, bytes]:
+        store = self._evidence
+        found = self._find_evidence(request, suffix="/video")
+        if store is None or not isinstance(found, Evidence):
+            status, body = (
+                found
+                if not isinstance(found, Evidence)
+                else (
+                    HTTPStatus.NOT_FOUND,
+                    {"error": "evidence is not enabled on this box"},
+                )
+            )
+            return _media_error(status, str(body.get("error", "not found")))
+        query = parse_qs(urlparse(request.path).query)
+        raw_variant = (query.get("variant") or ["original"])[0]
+        try:
+            variant = ClipVariant(raw_variant)
+        except ValueError:
+            return _media_error(HTTPStatus.BAD_REQUEST, "variant must be original or overlay")
+        try:
+            payload = store.open_clip(found, variant)
+        except (UnknownEvidenceError, EvidenceCryptoError, OSError) as exc:
+            return _media_error(HTTPStatus.NOT_FOUND, str(exc))
+        store.audit(
+            "download",
+            found.evidence_id,
+            self._device_name(request.token),
+            {"variant": variant.value},
+        )
+        return HTTPStatus.OK, "video/mp4", payload
+
+    def _evidence_thumbnail(self, request: RequestContext) -> tuple[HTTPStatus, str, bytes]:
+        store = self._evidence
+        found = self._find_evidence(request, suffix="/thumbnail")
+        if store is None or not isinstance(found, Evidence):
+            status, body = (
+                found
+                if not isinstance(found, Evidence)
+                else (
+                    HTTPStatus.NOT_FOUND,
+                    {"error": "evidence is not enabled on this box"},
+                )
+            )
+            return _media_error(status, str(body.get("error", "not found")))
+        try:
+            payload = store.open_thumbnail(found)
+        except (UnknownEvidenceError, EvidenceCryptoError, OSError) as exc:
+            return _media_error(HTTPStatus.NOT_FOUND, str(exc))
+        store.audit("thumbnail", found.evidence_id, self._device_name(request.token))
+        return HTTPStatus.OK, "image/jpeg", payload
