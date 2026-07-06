@@ -2,6 +2,18 @@
 
 **Recommendation: KEEP COCO. Do not promote this run.**
 
+> **Sprint 19.1 update:** the custom YOLOX-Tiny implementation this
+> report evaluates was **removed** after an audit traced this report's
+> false-positive explosion to the detector implementation itself, not
+> the training budget. It was replaced with the official Apache-2.0
+> YOLOX package. See
+> [`sprint-19-1-detector-comparison.md`](sprint-19-1-detector-comparison.md)
+> for the audit findings and a head-to-head re-run, and
+> [architecture/detector-integration.md](../../architecture/detector-integration.md)
+> for why Guardian does not maintain its own detector implementations.
+> This original report is kept as-is below — it is the real run that
+> motivated the correction.
+
 This report covers the **local validation run** executed in this
 session — not the full spec run. Read [Scope](#scope-what-actually-ran-here)
 before the numbers below; they describe a deliberately small run whose

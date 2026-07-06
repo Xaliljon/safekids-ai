@@ -1,0 +1,73 @@
+{
+  "settings": {
+    "iou_threshold": 0.5,
+    "score_threshold": 0.25
+  },
+  "images_analyzed": 256,
+  "top_false_positive_images": [],
+  "top_false_negative_images": [
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000001.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000002.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000003.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000004.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000005.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000006.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000007.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000008.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000009.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000010.png",
+      "false_positives": 0,
+      "false_negatives": 1,
+      "ground_truths": 1
+    }
+  ],
+  "worst_confidence_false_positives": [],
+  "worst_localization": [],
+  "most_confused_classes": []
+}

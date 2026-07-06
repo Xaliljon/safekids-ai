@@ -1,0 +1,92 @@
+{
+  "experiment_id": "2026-07-06T225743-guardian-model-v1-official-yolox-v2-dbcff0",
+  "status": "completed",
+  "config": {
+    "name": "guardian-model-v1-official-yolox-v2",
+    "model": {
+      "family": "yolox-tiny",
+      "input_size": 640,
+      "pretrained": false,
+      "checkpoint": null
+    },
+    "dataset": {
+      "registry_root": "/Users/khaliljonbakhtiyorovold/guardian-ai/datasets/registry",
+      "name": "guardian-fall-detection-v1",
+      "version": "1.0.0",
+      "train_split": "train",
+      "val_split": "val",
+      "test_split": "test",
+      "format": "video",
+      "max_samples": 256
+    },
+    "epochs": 6,
+    "batch_size": 16,
+    "optimizer": {
+      "name": "adamw",
+      "learning_rate": 0.001,
+      "weight_decay": 0.0005,
+      "momentum": 0.9
+    },
+    "scheduler": {
+      "name": "cosine",
+      "step_size": 10,
+      "gamma": 0.1
+    },
+    "augmentation": {
+      "horizontal_flip": 0.5
+    },
+    "early_stopping": {
+      "enabled": true,
+      "metric": "f1",
+      "mode": "max",
+      "patience": 10
+    },
+    "seed": 42,
+    "output_dir": "/private/tmp/claude-502/-Users-khaliljonbakhtiyorovold/f8ce20b5-fe80-4d92-a413-6a9e7a304849/scratchpad/s19/runs",
+    "device": "cpu",
+    "workers": 2,
+    "mixed_precision": false
+  },
+  "dataset": {
+    "name": "guardian-fall-detection-v1",
+    "version": "1.0.0"
+  },
+  "taxonomy": {
+    "name": "guardian-video-safety",
+    "version": "1.0.0"
+  },
+  "git_commit": "6f04c2d8aa790bd4bf27b7738bf391b91e479816",
+  "started_utc": "2026-07-06T22:57:44.226633+00:00",
+  "finished_utc": "2026-07-06T23:13:52.522796+00:00",
+  "epochs_completed": 6,
+  "metrics": {
+    "val": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0,
+      "false_positives": 0,
+      "false_negatives": 256,
+      "images": 256
+    },
+    "best_f1": 0.0,
+    "stopped_early": false
+  },
+  "checksums": {
+    "model.onnx": "9c24ace0b8381d7d08c5e2bd47ba2de98e6697d2e9f5cfe5eaafdb8c84446f66"
+  },
+  "promotion": null,
+  "evaluated_split": "test",
+  "benchmark": {
+    "latency_ms_mean": 25.755,
+    "latency_ms_p95": 26.012,
+    "memory_mb": 228.2,
+    "size_mb": 19.463
+  },
+  "candidate": {
+    "status": "candidate",
+    "not_production": true,
+    "notes": "Sprint 19.1 architecture-correction validation: official Apache-2.0 YOLOX-Tiny replacing the removed custom implementation. Local bounded run (256/6ep, CPU, adamw lr=1e-3 for numerical stability) \u2014 proves the wrapper/loss/decode integration is correct (see the single-example overfit test in the audit) but is far too few steps to converge on diverse data; zero false positives (vs custom's 71,885) is the key architectural improvement. Full Colab T4 run required before any promotion decision."
+  }
+}
