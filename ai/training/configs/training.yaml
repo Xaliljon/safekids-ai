@@ -1,0 +1,30 @@
+# Production training template. The yolox-tiny family is RESERVED until
+# the Sprint 17 architecture review approves real training — loading this
+# config today fails loudly with that exact explanation, by design.
+name: safekids-detector
+model:
+  family: yolox-tiny        # gated: lands with the first approved real run
+  input_size: 416
+dataset:
+  registry_root: ai/training/datasets/registry
+  name: kindergarten-scenes # future real dataset (Sprint 7 registry)
+  version: null             # null -> latest registered version
+epochs: 100
+batch_size: 32
+optimizer:
+  name: sgd
+  learning_rate: 0.01
+  weight_decay: 0.0005
+  momentum: 0.9
+scheduler:
+  name: cosine
+augmentation:
+  horizontal_flip: 0.5
+early_stopping:
+  enabled: true
+  metric: map50
+  mode: max
+  patience: 10
+seed: 2026
+output_dir: ai/training/runs
+device: cpu                 # cuda on the training server, cpu for dry runs

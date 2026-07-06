@@ -1,0 +1,8 @@
+# Experiment artifacts and generated data never enter git.
+runs/*
+!runs/.gitkeep
+datasets/registry/
+models/*
+!models/.gitkeep
+reports/*
+!reports/.gitkeep

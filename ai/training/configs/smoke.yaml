@@ -1,0 +1,29 @@
+# Platform smoke run: proves config -> train -> evaluate -> export ->
+# compare -> promote end to end on the synthetic dataset.
+# This is NOT a real model (Sprint 17: "do not train any model yet").
+name: smoke
+model:
+  family: tiny-ssd
+  input_size: 96
+dataset:
+  registry_root: ai/training/datasets/registry
+  name: dummy-detection
+  # version omitted -> latest registered
+epochs: 5
+batch_size: 8
+optimizer:
+  name: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+scheduler:
+  name: cosine
+augmentation:
+  horizontal_flip: 0.5
+early_stopping:
+  enabled: true
+  metric: f1
+  mode: max
+  patience: 3
+seed: 2026
+output_dir: ai/training/runs
+device: cpu
