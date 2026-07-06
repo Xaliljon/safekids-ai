@@ -21,16 +21,19 @@ def test_tiny_ssd_is_available() -> None:
     assert family.license == "Proprietary-GuardianAI"
 
 
-@pytest.mark.parametrize("name", ["yolox-tiny", "yolov8", "yolo11", "rt-detr"])
+def test_yolox_tiny_is_available_since_sprint_19() -> None:
+    # unlocked by the Sprint 19 architecture review; see yolox_tiny.py
+    assert "yolox-tiny" in available_families()
+    assert "yolox-tiny" not in reserved_families()
+    family = get_family("yolox-tiny")
+    assert family.license == "Proprietary-GuardianAI"
+
+
+@pytest.mark.parametrize("name", ["yolov8", "yolo11", "rt-detr"])
 def test_reserved_families_fail_loudly(name: str) -> None:
     assert name in reserved_families()
     with pytest.raises(TrainingConfigurationError, match="reserved"):
         get_family(name)
-
-
-def test_yolox_reservation_cites_the_review_gate() -> None:
-    with pytest.raises(TrainingConfigurationError, match="architecture review"):
-        get_family("yolox-tiny")
 
 
 def test_agpl_families_cite_the_license_block() -> None:
@@ -57,7 +60,8 @@ def test_tiny_ssd_forward_loss_decode() -> None:
 
     boxes = torch.tensor([[0.5, 0.5, 0.3, 0.3], [0.4, 0.4, 0.2, 0.2]])
     labels = torch.tensor([0, 2])
-    loss = family.loss(outputs, boxes, labels)
+    targets = [(boxes[0:1], labels[0:1]), (boxes[1:2], labels[1:2])]
+    loss = family.loss(outputs, targets)
     assert loss.requires_grad
     assert float(loss) > 0
 

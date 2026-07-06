@@ -74,6 +74,7 @@ def _match_image(
                 "matched": matched,
                 "gt_label": int(gt_labels[best_gt]) if best_gt >= 0 and matched else None,
                 "correct": matched and int(prediction.labels[index]) == int(gt_labels[best_gt]),
+                "iou": float(best_iou),  # best available IoU, even for unmatched/FP predictions
             }
         )
     return outcomes

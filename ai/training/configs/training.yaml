@@ -1,14 +1,17 @@
-# Production training template. The yolox-tiny family is RESERVED until
-# the Sprint 17 architecture review approves real training — loading this
-# config today fails loudly with that exact explanation, by design.
-name: safekids-detector
+# Future production template. rt-detr is RESERVED — scheduled after
+# YOLOX-tiny (Sprint 19, ai/training/configs/model-v1.yaml is the real,
+# working config for that family). Loading this config today fails loudly
+# with that exact explanation, by design; this file just illustrates the
+# shape a config for a not-yet-approved family takes.
+name: safekids-detector-next
 model:
-  family: yolox-tiny        # gated: lands with the first approved real run
-  input_size: 416
+  family: rt-detr           # gated: scheduled after yolox-tiny lands
+  input_size: 640
 dataset:
-  registry_root: ai/training/datasets/registry
-  name: kindergarten-scenes # future real dataset (Sprint 7 registry)
+  registry_root: datasets/registry
+  name: guardian-fall-detection-v1
   version: null             # null -> latest registered version
+  format: video             # Sprint 18 VideoDatasetRegistry training export
 epochs: 100
 batch_size: 32
 optimizer:

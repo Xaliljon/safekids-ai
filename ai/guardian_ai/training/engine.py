@@ -23,6 +23,7 @@ from guardian_ai.training.data import RegistryDataModule
 from guardian_ai.training.errors import ExperimentError, TrainingConfigurationError
 from guardian_ai.training.experiment import Experiment
 from guardian_ai.training.families import get_family
+from guardian_ai.training.video_data import VideoRegistryDataModule
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,15 @@ class Trainer:
     def __init__(self, config: TrainingConfig) -> None:
         self._config = config
         self._family = get_family(config.model.family)
-        self._data = RegistryDataModule(config.dataset, config.model.input_size)
+        if config.dataset.format == "video":
+            self._data: Any = VideoRegistryDataModule(
+                config.dataset, config.model.input_size, workers=config.workers
+            )
+        else:
+            self._data = RegistryDataModule(config.dataset, config.model.input_size)
 
     @property
-    def data(self) -> RegistryDataModule:
+    def data(self) -> Any:
         return self._data
 
     @property
@@ -186,20 +192,29 @@ class Trainer:
 
     def evaluate(self, model: Any, split_name: str) -> dict[str, Any]:
         """Run the model over one split and compute the full metric set."""
+        predictions, ground_truths, _paths = self.predict_split(model, split_name)
+        return evaluate_detections(predictions, ground_truths, self._data.class_names)
+
+    def predict_split(
+        self, model: Any, split_name: str
+    ) -> tuple[list[Any], list[tuple[np.ndarray, np.ndarray]], list[str]]:
+        """Predictions + ground truths + image paths, one triple per image —
+        the shared basis for metrics, error analysis and qualitative export."""
         import torch
 
         model.eval()
         predictions = []
-        ground_truths = []
+        ground_truths: list[tuple[np.ndarray, np.ndarray]] = []
+        paths: list[str] = []
         device = next(model.parameters()).device
-        for images, boxes, labels in self._data.batches(split_name, self._config.batch_size):
+        for images, targets, batch_paths in self._data.batches(split_name, self._config.batch_size):
             with torch.no_grad():
                 outputs = model(torch.from_numpy(images).to(device))
             predictions.extend(self._family.decode(outputs))
-            for index in range(len(labels)):
-                ground_truths.append((boxes[index : index + 1], labels[index : index + 1]))
+            ground_truths.extend(targets)  # already (boxes_i, labels_i) per image
+            paths.extend(batch_paths)
         model.train()
-        return evaluate_detections(predictions, ground_truths, self._data.class_names)
+        return predictions, ground_truths, paths
 
     def load_best_model(self, experiment: Experiment) -> Any:
         import torch
@@ -237,18 +252,34 @@ class Trainer:
             raise TrainingConfigurationError(
                 f"split '{config.dataset.train_split}' produced no batches"
             )
+        # autocast supports cpu/cuda directly; anything else (e.g. mps) trains
+        # in full precision rather than silently no-op the requested setting.
+        autocast_type = device.type if device.type in ("cpu", "cuda") else None
+        use_amp = config.mixed_precision and autocast_type is not None
+        scaler = (
+            torch.amp.GradScaler(device.type)  # type: ignore[attr-defined]
+            if use_amp and device.type == "cuda"
+            else None
+        )
+
         model.train()
         total = 0.0
-        for images, boxes, labels in batches:
+        for images, raw_targets, _paths in batches:
             optimizer.zero_grad()
-            outputs = model(torch.from_numpy(images).to(device))
-            loss = self._family.loss(
-                outputs,
-                torch.from_numpy(boxes).to(device),
-                torch.from_numpy(labels).to(device),
-            )
-            loss.backward()  # type: ignore[no-untyped-call]  # torch stubs gap
-            optimizer.step()
+            targets = [
+                (torch.from_numpy(boxes).to(device), torch.from_numpy(labels).to(device))
+                for boxes, labels in raw_targets
+            ]
+            with torch.autocast(device_type=autocast_type or "cpu", enabled=use_amp):
+                outputs = model(torch.from_numpy(images).to(device))
+                loss = self._family.loss(outputs, targets)
+            if scaler is not None:
+                scaler.scale(loss).backward()  # type: ignore[no-untyped-call]
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()  # type: ignore[no-untyped-call]  # torch stubs gap
+                optimizer.step()
             total += float(loss.detach())
         return total / len(batches)
 

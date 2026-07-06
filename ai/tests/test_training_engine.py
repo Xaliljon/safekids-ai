@@ -115,7 +115,7 @@ def test_evaluate_full_metric_structure(registry_root: Path, tmp_path: Path) -> 
 def test_reserved_family_cannot_reach_the_engine(registry_root: Path, tmp_path: Path) -> None:
     config = make_training_config(registry_root, tmp_path / "runs")
     reserved = config.to_dict()
-    reserved["model"]["family"] = "yolox-tiny"
+    reserved["model"]["family"] = "yolov8"  # AGPL-blocked (ADR-0003), still reserved
     from guardian_ai.training.config import config_from_dict
 
     with pytest.raises(TrainingConfigurationError, match="reserved"):

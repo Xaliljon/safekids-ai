@@ -10,10 +10,13 @@ Families in v1:
 - ``tiny-ssd``  — a small, genuinely trainable single-object detector used
   to prove the whole platform end to end (smoke training on the dummy
   dataset). Not a production model.
-- ``yolox-tiny`` — RESERVED. The production family; its trainer lands with
-  the first real training run, which is gated behind the Sprint 17
-  architecture review ("do not train any model yet"). Configs referencing
-  it fail loudly with that explanation, never silently.
+- ``yolox-tiny`` — the production family (ADR-0003: Apache-2.0). Reserved
+  through Sprint 17 pending architecture review ("do not train any model
+  yet"); unlocked in Sprint 19 for the first real training run on
+  guardian-fall-detection-v1. A from-scratch anchor-free detector
+  (CSPDarknet-tiny-style backbone, PAFPN-lite neck, decoupled head over
+  strides 8/16/32) with a simplified SimOTA-style target assignment —
+  see ``yolox_tiny.py`` for exactly what is simplified and why.
 - ``yolov8`` / ``yolo11`` — RESERVED and additionally license-blocked
   (AGPL, ADR-0003) until a compliant implementation path is approved.
 - ``rt-detr`` — RESERVED (Apache-2.0; scheduled after YOLOX).
@@ -43,7 +46,13 @@ class Prediction:
 
 
 class DetectorFamily(Protocol):
-    """Everything architecture-specific, behind one port."""
+    """Everything architecture-specific, behind one port.
+
+    ``loss`` takes per-image targets as a list — ``targets[i] = (boxes_i,
+    labels_i)`` with ``boxes_i`` shaped ``(M_i, 4)`` — so the engine never
+    assumes a fixed number of objects per image. Single-object families
+    (tiny-ssd) simply read the first entry of each image's targets.
+    """
 
     name: str
     license: str
@@ -51,7 +60,7 @@ class DetectorFamily(Protocol):
     def build(self, num_classes: int, input_size: int) -> torch.nn.Module: ...
 
     def loss(
-        self, outputs: torch.Tensor, boxes: torch.Tensor, labels: torch.Tensor
+        self, outputs: torch.Tensor, targets: list[tuple[torch.Tensor, torch.Tensor]]
     ) -> torch.Tensor: ...
 
     def decode(self, outputs: torch.Tensor) -> list[Prediction]: ...
@@ -63,12 +72,6 @@ class DetectorFamily(Protocol):
 
 _FAMILIES: dict[str, Callable[[], DetectorFamily]] = {}
 _RESERVED: dict[str, str] = {
-    "yolox-tiny": (
-        "the production YOLOX-tiny trainer lands with the first REAL training "
-        "run — gated behind the Sprint 17 architecture review "
-        "('do not train any model yet'). Use family 'tiny-ssd' for platform "
-        "smoke runs."
-    ),
     "yolov8": "license-blocked (AGPL-3.0, ADR-0003) — no compliant path approved yet",
     "yolo11": "license-blocked (AGPL-3.0, ADR-0003) — no compliant path approved yet",
     "rt-detr": "reserved (Apache-2.0); scheduled after YOLOX-tiny lands",
@@ -148,16 +151,19 @@ class TinySsdFamily:
         return TinySsd()
 
     def loss(
-        self, outputs: torch.Tensor, boxes: torch.Tensor, labels: torch.Tensor
+        self, outputs: torch.Tensor, targets: list[tuple[torch.Tensor, torch.Tensor]]
     ) -> torch.Tensor:
         import torch
         from torch.nn import functional
 
-        box_loss = functional.l1_loss(outputs[:, :4], boxes)
+        # single-object smoke family: the first annotation per image is the target
+        box_targets = torch.stack([boxes[0] for boxes, _ in targets])
+        label_targets = torch.stack([labels[0] for _, labels in targets])
+        box_loss = functional.l1_loss(outputs[:, :4], box_targets)
         objectness_loss = functional.binary_cross_entropy_with_logits(
             outputs[:, 4], torch.ones_like(outputs[:, 4])
         )
-        class_loss = functional.cross_entropy(outputs[:, 5:], labels)
+        class_loss = functional.cross_entropy(outputs[:, 5:], label_targets)
         return box_loss * 5.0 + objectness_loss + class_loss
 
     def decode(self, outputs: torch.Tensor) -> list[Prediction]:
@@ -188,6 +194,20 @@ class TinySsdFamily:
 
 
 register_family(TinySsdFamily.name, TinySsdFamily)
+
+
+# -------------------------------------------------------------- yolox-tiny
+
+
+def _make_yolox_tiny() -> DetectorFamily:
+    # deferred import: yolox_tiny.py pulls in the full torch module tree,
+    # which every other family already avoids paying for at import time.
+    from guardian_ai.training.yolox_tiny import YoloxTinyFamily
+
+    return YoloxTinyFamily()
+
+
+register_family("yolox-tiny", _make_yolox_tiny)
 
 
 def family_metadata(family: DetectorFamily, num_classes: int, input_size: int) -> dict[str, Any]:

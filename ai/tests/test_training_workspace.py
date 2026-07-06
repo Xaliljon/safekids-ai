@@ -33,8 +33,8 @@ def test_smoke_config_is_valid_and_trainable() -> None:
 def test_training_template_is_valid_but_gated() -> None:
     raw = yaml.safe_load((TRAINING_DIR / "configs" / "training.yaml").read_text())
     config = config_from_dict(raw, source="training.yaml")
-    # the production family stays behind the architecture review, loudly
-    with pytest.raises(TrainingConfigurationError, match="architecture review"):
+    # rt-detr is scheduled after yolox-tiny; the reservation gate still fires loudly
+    with pytest.raises(TrainingConfigurationError, match="scheduled after YOLOX-tiny"):
         get_family(config.model.family)
 
 

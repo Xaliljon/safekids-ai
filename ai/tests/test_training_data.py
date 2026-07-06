@@ -51,17 +51,20 @@ def test_splits_and_sample_shapes(registry_root: Path) -> None:
     assert sample.image.shape == (3, 64, 64)
     assert sample.image.dtype == np.float32
     assert float(sample.image.min()) >= 0.0 and float(sample.image.max()) <= 1.0
-    assert sample.box.shape == (4,)
-    assert 0 <= sample.label < 3
+    assert sample.boxes.shape == (1, 4)
+    assert 0 <= sample.labels[0] < 3
 
 
 def test_batches_shapes(registry_root: Path) -> None:
     module = make_module(registry_root)
     batches = module.batches("train", batch_size=4)
     assert [images.shape[0] for images, _, _ in batches] == [4, 2]
-    images, boxes, labels = batches[0]
+    images, targets, paths = batches[0]
     assert images.shape == (4, 3, 64, 64)
-    assert boxes.shape == (4, 4)
+    assert len(targets) == 4
+    assert len(paths) == 4
+    boxes, labels = targets[0]
+    assert boxes.shape == (1, 4)
     assert labels.dtype == np.int64
 
 
@@ -70,8 +73,8 @@ def test_horizontal_flip_flips_box_and_image(registry_root: Path) -> None:
     plain = module.samples("train")
     flipped = module.samples("train", augment=True, flip_probability=1.0, rng=random.Random(0))
     for before, after in zip(plain, flipped, strict=True):
-        assert after.box[0] == pytest.approx(1.0 - before.box[0], abs=1e-6)
-        assert after.box[1] == pytest.approx(before.box[1])
+        assert after.boxes[0, 0] == pytest.approx(1.0 - before.boxes[0, 0], abs=1e-6)
+        assert after.boxes[0, 1] == pytest.approx(before.boxes[0, 1])
         np.testing.assert_allclose(after.image, before.image[:, :, ::-1], atol=1e-6)
 
 

@@ -19,6 +19,7 @@ from guardian_ai.training.errors import TrainingConfigurationError
 _OPTIMIZERS = ("sgd", "adam", "adamw")
 _SCHEDULERS = ("none", "cosine", "step")
 _ES_MODES = ("max", "min")
+_DATASET_FORMATS = ("images", "video")
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +37,14 @@ class DatasetConfig:
     train_split: str = "train"
     val_split: str = "val"
     test_split: str = "test"
+    format: str = "images"
+    """"images" = Sprint 7 FileSystemDatasetRegistry (SampleRecord/JSONL).
+    "video" = Sprint 18 VideoDatasetRegistry's pre-extracted training/
+    export (guardian_dataset_v1 -> images/+labels/+data.yaml)."""
+    max_samples: int | None = None
+    """Cap each split to its first N images (sorted, so deterministic) —
+    for bounded smoke/validation runs against a real, full-size published
+    dataset. None (default) trains on the complete split, every sample."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +93,10 @@ class TrainingConfig:
     output_dir: Path = Path("ai/training/runs")
     device: str = "cpu"
     """cpu by default: deterministic and universal; cuda/mps opt-in."""
+    workers: int = 0
+    """Parallel data-loading threads (video dataset format only); 0 = main thread."""
+    mixed_precision: bool = False
+    """torch.autocast during training; GradScaler is added automatically on cuda."""
 
     def __post_init__(self) -> None:
         if not self.name.strip():
@@ -110,6 +123,14 @@ class TrainingConfig:
             raise TrainingConfigurationError("horizontal_flip must be a probability")
         if self.model.input_size < 32:
             raise TrainingConfigurationError("model.input_size must be >= 32")
+        if self.dataset.format not in _DATASET_FORMATS:
+            raise TrainingConfigurationError(
+                f"unknown dataset.format '{self.dataset.format}' (one of {_DATASET_FORMATS})"
+            )
+        if self.dataset.max_samples is not None and self.dataset.max_samples < 1:
+            raise TrainingConfigurationError("dataset.max_samples must be >= 1 when set")
+        if self.workers < 0:
+            raise TrainingConfigurationError("workers must be >= 0")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -122,6 +143,8 @@ class TrainingConfig:
                 "train_split": self.dataset.train_split,
                 "val_split": self.dataset.val_split,
                 "test_split": self.dataset.test_split,
+                "format": self.dataset.format,
+                "max_samples": self.dataset.max_samples,
             },
             "epochs": self.epochs,
             "batch_size": self.batch_size,
@@ -146,6 +169,8 @@ class TrainingConfig:
             "seed": self.seed,
             "output_dir": str(self.output_dir),
             "device": self.device,
+            "workers": self.workers,
+            "mixed_precision": self.mixed_precision,
         }
 
 
@@ -176,6 +201,8 @@ def config_from_dict(raw: dict[str, Any], source: str = "<dict>") -> TrainingCon
         "seed",
         "output_dir",
         "device",
+        "workers",
+        "mixed_precision",
     }
     unknown = set(raw) - known
     if unknown:
@@ -199,6 +226,10 @@ def config_from_dict(raw: dict[str, Any], source: str = "<dict>") -> TrainingCon
                 train_split=str(dataset_raw.get("train_split", "train")),
                 val_split=str(dataset_raw.get("val_split", "val")),
                 test_split=str(dataset_raw.get("test_split", "test")),
+                format=str(dataset_raw.get("format", "images")),
+                max_samples=(
+                    int(dataset_raw["max_samples"]) if dataset_raw.get("max_samples") else None
+                ),
             ),
             epochs=int(raw["epochs"]),
             batch_size=int(raw["batch_size"]),
@@ -209,6 +240,8 @@ def config_from_dict(raw: dict[str, Any], source: str = "<dict>") -> TrainingCon
             seed=int(raw.get("seed", 2026)),
             output_dir=Path(str(raw.get("output_dir", "ai/training/runs"))),
             device=str(raw.get("device", "cpu")),
+            workers=int(raw.get("workers", 0)),
+            mixed_precision=bool(raw.get("mixed_precision", False)),
         )
     except KeyError as exc:
         raise TrainingConfigurationError(f"{source}: missing required key {exc}") from exc
