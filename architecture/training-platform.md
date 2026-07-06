@@ -157,15 +157,27 @@ writes from Colab" rule.
 | duplicate zoo version | promotion refuses; bump the version |
 | a real split has tens of thousands of images | `VideoRegistryDataModule.batches()` is lazy (`LazyBatches`) — decodes one batch at a time, O(batch_size) peak memory, never the whole split |
 
-## Sprint 19: the first production model (YOLOX-Tiny)
+## Sprint 19 / 19.1: the first production model (YOLOX)
 
-`yolox-tiny` (`ai/guardian_ai/training/yolox_tiny.py`) is a from-scratch,
-anchor-free, multi-scale `DetectorFamily` — CSPDarknet-tiny-style
-backbone, PAFPN-lite neck, decoupled head over strides 8/16/32 — unlocked
-from Sprint 17's reservation now that the architecture review covers it.
-Target assignment is a **documented simplification** of the paper's
-SimOTA (center-region candidates + nearest-k, not optimal transport); see
-the module's docstring for exactly what differs and why.
+Sprint 19 unlocked `yolox-tiny` from Sprint 17's reservation with a
+**from-scratch** `DetectorFamily` implementation. An audit — triggered by
+the trained candidate performing far worse than the official COCO
+checkpoint — found the custom head could not converge objectness even
+when overfitting a single real training example, traced to its zero-bias
+initialization versus upstream's `prior_prob`-based init. Sprint 19.1
+removed the custom implementation entirely and replaced it with
+`OfficialYoloxTrainer`, wrapping the real, unmodified upstream Apache-2.0
+YOLOX package (`guardian_ai/training/detectors/yolox/`). Re-running the
+exact same single-example overfit test against the official
+implementation converges cleanly. Full detail, including the audit
+findings and the "why not just fix it" reasoning:
+[architecture/detector-integration.md](detector-integration.md).
+
+`yolox-nano`/`yolox-tiny`/`yolox-s`/`yolox-m`/`yolox-l` are all now
+available (configuration-only variant selection, no hardcoding);
+`model.pretrained`/`model.checkpoint` in the training YAML control
+COCO-pretrained transfer learning (auto-download, checksum-pinned) or a
+custom checkpoint path.
 
 Real published video datasets (Sprint 18) export one training image per
 *annotated frame*, not per clip — `guardian-fall-detection-v1`'s 357
