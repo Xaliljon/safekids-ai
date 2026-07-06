@@ -56,6 +56,7 @@ select = [
 "edge/guardian_edge/cli.py" = ["T201"]  # guardianctl talks to the operator via stdout
 "ai/guardian_ai/train/__init__.py" = ["T201"]  # training CLI talks to the operator via stdout
 "ai/guardian_ai/dataset/__init__.py" = ["T201"]  # dataset CLI talks to the operator via stdout
+"ai/guardian_ai/training/coco_baseline.py" = ["T201"]  # standalone CLI wrapper prints its result
 "ai/training/scripts/**" = ["T201", "S311"]  # operator scripts print; synthetic data uses random
 "ai/training/notebooks/**" = ["T201"]  # Colab cells print for the human running them
 

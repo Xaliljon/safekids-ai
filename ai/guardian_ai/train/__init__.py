@@ -19,9 +19,15 @@ from pathlib import Path
 from typing import Any
 
 from guardian_ai.evaluation.detection import EVALUATION_FILE, save_evaluation
+from guardian_ai.evaluation.error_analysis import (
+    ERROR_ANALYSIS_FILE,
+    analyze_errors,
+    save_error_analysis,
+)
 from guardian_ai.export.compat import check_compatibility
 from guardian_ai.export.manifest import build_manifest, load_manifest, save_manifest
 from guardian_ai.export.onnx_export import MODEL_FILE, export_onnx
+from guardian_ai.training.coco_baseline import evaluate_coco_baseline, fetch_official_checkpoint
 from guardian_ai.training.compare import (
     COMPARISON_FILE,
     benchmark_onnx,
@@ -33,7 +39,9 @@ from guardian_ai.training.engine import Trainer
 from guardian_ai.training.errors import TrainingError
 from guardian_ai.training.experiment import Experiment
 from guardian_ai.training.promote import promote
+from guardian_ai.training.qualitative import QUALITATIVE_DIR, export_qualitative_samples
 from guardian_ai.training.reports import generate_reports, load_history
+from guardian_ai.training.video_data import VideoRegistryDataModule
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +239,122 @@ def cmd_promote(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_error_analysis(arguments: argparse.Namespace) -> int:
+    experiment, trainer = _open_run(Path(arguments.run))
+    config = _config_for_run(experiment)
+    split = arguments.split or config.dataset.test_split
+    model = trainer.load_best_model(experiment)
+    predictions, ground_truths, paths = trainer.predict_split(model, split)
+    result = analyze_errors(
+        predictions, ground_truths, paths, trainer.data.class_names, top_k=arguments.top_k
+    )
+    destination = experiment.reports_dir / ERROR_ANALYSIS_FILE
+    save_error_analysis(result, destination)
+    _print(
+        {
+            "split": split,
+            "written": str(destination),
+            "images_analyzed": result["images_analyzed"],
+            "top_false_positive_images": len(result["top_false_positive_images"]),
+            "top_false_negative_images": len(result["top_false_negative_images"]),
+            "most_confused_classes": result["most_confused_classes"][:5],
+        }
+    )
+    return 0
+
+
+def cmd_qualitative(arguments: argparse.Namespace) -> int:
+    experiment, trainer = _open_run(Path(arguments.run))
+    config = _config_for_run(experiment)
+    if not isinstance(trainer.data, VideoRegistryDataModule):
+        raise TrainingError(
+            "qualitative export needs dataset.format: video (Sprint 18 training export) — "
+            f"this run used format '{config.dataset.format}'"
+        )
+    split = arguments.split or config.dataset.val_split
+    model = trainer.load_best_model(experiment)
+    destination = experiment.reports_dir / QUALITATIVE_DIR
+    written = export_qualitative_samples(
+        model,
+        trainer.family,
+        trainer.data,
+        split,
+        destination,
+        count=arguments.count,
+        seed=arguments.seed,
+    )
+    _print({"split": split, "written": len(written), "directory": str(destination)})
+    return 0
+
+
+def cmd_coco_compare(arguments: argparse.Namespace) -> int:
+    experiment, trainer = _open_run(Path(arguments.run))
+    config = _config_for_run(experiment)
+    if not isinstance(trainer.data, VideoRegistryDataModule):
+        raise TrainingError(
+            "coco-compare needs dataset.format: video (Sprint 18 training export) — "
+            f"this run used format '{config.dataset.format}'"
+        )
+    evaluation_path = experiment.reports_dir / EVALUATION_FILE
+    if not evaluation_path.is_file():
+        raise TrainingError(f"no {EVALUATION_FILE} — run 'evaluate' first")
+    manifest = load_manifest(experiment.export_dir)
+    candidate_eval = json.loads(evaluation_path.read_text(encoding="utf-8"))
+    candidate_bench = benchmark_onnx(
+        experiment.export_dir / MODEL_FILE,
+        input_name=manifest["inputs"][0]["name"],
+        input_shape=tuple(manifest["inputs"][0]["shape"]),
+        runs=arguments.runs,
+    )
+
+    split = arguments.split or config.dataset.test_split
+    onnx_path = fetch_official_checkpoint(
+        Path(arguments.zoo_root), Path(arguments.edge_project_root)
+    )
+    coco_eval = evaluate_coco_baseline(onnx_path, trainer.data, split)
+    coco_bench = benchmark_onnx(
+        onnx_path, input_name="images", input_shape=(1, 3, 416, 416), runs=arguments.runs
+    )
+
+    result = compare_models(candidate_eval, coco_eval, candidate_bench, coco_bench)
+    result["candidate_id"] = experiment.experiment_id
+    result["baseline_id"] = "yolox-tiny-coco-0.1.1-rc0"
+    destination = experiment.run_dir / "coco-comparison.json"
+    save_comparison(result, destination)
+    _print(
+        {
+            "verdict": result["verdict"],
+            "reasons": result["reasons"],
+            "written": str(destination),
+            "candidate_precision": candidate_eval["overall"]["precision"],
+            "coco_precision": coco_eval["overall"]["precision"],
+        }
+    )
+    return 0
+
+
+def cmd_candidate(arguments: argparse.Namespace) -> int:
+    """Mark a run as a CANDIDATE model. Never installs into any model
+    zoo — Sprint 19 rule: 'DO NOT deploy. Candidate Model Only.'"""
+    experiment, _ = _open_run(Path(arguments.run))
+    experiment.update(
+        candidate={
+            "status": "candidate",
+            "not_production": True,
+            "notes": arguments.notes,
+        }
+    )
+    _print(
+        {
+            "experiment_id": experiment.experiment_id,
+            "status": "candidate",
+            "note": "not installed into any model zoo — promotion is a separate, "
+            "later, human decision",
+        }
+    )
+    return 0
+
+
 # --------------------------------------------------------------------- main
 
 
@@ -291,6 +415,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="name of the human approving this promotion",
     )
     promote_parser.set_defaults(handler=cmd_promote)
+
+    error_analysis = commands.add_parser(
+        "error-analysis", help="top FP/FN images, worst confidence, worst localization"
+    )
+    error_analysis.add_argument("--run", required=True)
+    error_analysis.add_argument("--split", default=None, help="default: the config's test split")
+    error_analysis.add_argument("--top-k", type=int, default=10, dest="top_k")
+    error_analysis.set_defaults(handler=cmd_error_analysis)
+
+    qualitative = commands.add_parser(
+        "qualitative", help="export random validation predictions as PNGs (GT + predicted boxes)"
+    )
+    qualitative.add_argument("--run", required=True)
+    qualitative.add_argument("--split", default=None, help="default: the config's val split")
+    qualitative.add_argument("--count", type=int, default=50)
+    qualitative.add_argument("--seed", type=int, default=0)
+    qualitative.set_defaults(handler=cmd_qualitative)
+
+    coco_compare = commands.add_parser(
+        "coco-compare", help="COCO-pretrained YOLOX-tiny vs this run -> PROMOTE or KEEP COCO"
+    )
+    coco_compare.add_argument("--run", required=True)
+    coco_compare.add_argument("--split", default=None, help="default: the config's test split")
+    coco_compare.add_argument("--zoo-root", required=True, dest="zoo_root")
+    coco_compare.add_argument("--edge-project-root", required=True, dest="edge_project_root")
+    coco_compare.add_argument("--runs", type=int, default=30, help="benchmark iterations")
+    coco_compare.set_defaults(handler=cmd_coco_compare)
+
+    candidate = commands.add_parser(
+        "candidate", help="mark a run CANDIDATE — never installs into any model zoo"
+    )
+    candidate.add_argument("--run", required=True)
+    candidate.add_argument("--notes", default="")
+    candidate.set_defaults(handler=cmd_candidate)
     return parser
 
 
