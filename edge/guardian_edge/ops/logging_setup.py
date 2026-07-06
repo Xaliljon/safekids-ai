@@ -27,8 +27,13 @@ SUBSYSTEM_LOGS: dict[str, str] = {
     "guardian_edge.infrastructure.notifications": "notifications.log",
     "guardian_edge.api": "device_api.log",
     "guardian_edge.ops.installer": "installer.log",
+    "guardian_edge.application.debugging": "risk-debug.log",
 }
 SYSTEM_LOG = "system.log"
+
+# High-volume debug trails stay in their own file and do NOT propagate to
+# system.log (per-frame decision lines would drown everything else).
+_NO_PROPAGATE = {"guardian_edge.application.debugging"}
 
 
 class JsonLineFormatter(logging.Formatter):
@@ -86,7 +91,7 @@ def configure_logging(
         if file_name not in handlers_by_file:
             handlers_by_file[file_name] = handler_for(file_name)
         logger.addHandler(handlers_by_file[file_name])
-        logger.propagate = True  # system.log keeps the complete picture
+        logger.propagate = logger_name not in _NO_PROPAGATE
 
 
 def _remove_guardian_handlers(logger: logging.Logger) -> None:

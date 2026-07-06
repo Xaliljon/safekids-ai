@@ -84,6 +84,10 @@ def _build_parser() -> argparse.ArgumentParser:
     diag.add_argument("--no-cameras", action="store_true", help="skip live camera probes")
     diag.add_argument("--port", type=int, default=8787, help="device API port to check")
 
+    debug = sub.add_parser("debug", help="pipeline funnel with decision counters")
+    debug.add_argument("--json", action="store_true")
+    debug.add_argument("--port", type=int, default=DEFAULT_HEALTH_PORT)
+
     health = sub.add_parser("health", help="show live system health")
     health.add_argument("--json", action="store_true")
     health.add_argument("--port", type=int, default=DEFAULT_HEALTH_PORT)
@@ -219,6 +223,78 @@ def _cmd_diagnose(home: GuardianHome, args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def _cmd_debug(home: GuardianHome, args: argparse.Namespace) -> int:
+    """The developer dashboard: Camera -> ... -> Notification, explained."""
+    payload = _http_json(f"http://127.0.0.1:{args.port}/health")
+    if payload is None:
+        print(
+            f"{_FAIL} health endpoint unreachable on :{args.port} — is the box running?",
+            file=sys.stderr,
+        )
+        return 1
+    if args.json:
+        print(json.dumps(payload, indent=2))
+        return 0
+    components = payload.get("components", {})
+    cameras = components.get("cameras", {}) if isinstance(components, dict) else {}
+    inference = components.get("inference", {})
+    events = components.get("events", {})
+    risk = components.get("risk", {})
+    notifications = components.get("notifications", {})
+    debug = components.get("debug", {})
+
+    frames = sum(
+        camera.get("processed", 0)
+        for camera in (inference.get("cameras", {}) or {}).values()
+        if isinstance(camera, dict)
+    )
+    healthy = sum(1 for state in (cameras.get("cameras", {}) or {}).values() if state == "healthy")
+    total_cameras = len(cameras.get("cameras", {}) or {})
+
+    def stage(name: str, detail: str) -> None:
+        print(f"  {name:<14}{detail}")
+        print("      ↓")
+
+    print()
+    stage("Camera", f"{healthy}/{total_cameras} healthy, {frames} frames processed")
+    stage("Detection", f"{debug.get('detections', 0)} detections")
+    stage(
+        "Tracking",
+        f"{events.get('tracks_evaluated', 0)} track evaluations over "
+        f"{events.get('frames_observed', 0)} frames",
+    )
+    emitted = events.get("events_emitted", {}) or {}
+    stage(
+        "Event",
+        f"{debug.get('candidates', sum(emitted.values()))} candidate(s) emitted, "
+        f"{debug.get('track_evaluations', 0)} decisions explained",
+    )
+    stage(
+        "Risk",
+        f"{risk.get('opened_total', 0)} incident(s) opened, "
+        f"{risk.get('events_correlated', 0)} corroborated, "
+        f"{risk.get('suppressed_low_confidence', 0)} low-confidence, "
+        f"{risk.get('suppressed_after_dismissal', 0)} suppressed",
+    )
+    print(
+        f"  {'Notification':<14}{notifications.get('delivered', 0)} delivered, "
+        f"queue {notifications.get('queue', 0)}"
+    )
+    rejections = debug.get("rejections", {}) or {}
+    if rejections:
+        print("\n  Rejection reasons (event engine):")
+        for reason, count in sorted(rejections.items(), key=lambda kv: -kv[1]):
+            print(f"    {count:>6} × {reason}")
+    outcomes = debug.get("risk_outcomes", {}) or {}
+    if outcomes:
+        print("\n  Risk outcomes:")
+        for outcome, count in sorted(outcomes.items(), key=lambda kv: -kv[1]):
+            print(f"    {count:>6} × {outcome}")
+    print(f"\n  full trail: {home.logs_dir / 'risk-debug.log'}")
+    print(f"  timelines:  {home.reports_dir}/<incident-id>/timeline.json")
+    return 0
+
+
 def _cmd_health(home: GuardianHome, args: argparse.Namespace) -> int:
     payload = _http_json(f"http://127.0.0.1:{args.port}/health")
     if payload is None:
@@ -295,6 +371,7 @@ _HANDLERS = {
     "add-camera": _cmd_add_camera,
     "test-camera": _cmd_test_camera,
     "diagnose": _cmd_diagnose,
+    "debug": _cmd_debug,
     "health": _cmd_health,
     "metrics": _cmd_metrics,
     "backup": _cmd_backup,

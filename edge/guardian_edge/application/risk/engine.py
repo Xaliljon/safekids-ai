@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Protocol
 from uuid import UUID, uuid4
 
+from guardian_edge.application.debugging.explain import RiskDecision, RiskDecisionObserver
 from guardian_edge.application.risk.policy import RiskPolicy, RiskPolicySet
 from guardian_edge.domain.errors import UnknownIncidentError
 from guardian_edge.domain.event import CandidateEvent, CandidateEventType
@@ -66,9 +67,11 @@ class RiskEngine:
         self,
         incident_consumer: IncidentConsumer,
         policies: RiskPolicySet | None = None,
+        observer: RiskDecisionObserver | None = None,
     ) -> None:
         self._consumer = incident_consumer
         self._policies = policies or RiskPolicySet()
+        self._observer = observer
 
         self._lock = threading.Lock()
         self._open: dict[_CorrelationKey, SafetyIncident] = {}
@@ -85,22 +88,95 @@ class RiskEngine:
         policy = self._policies.for_event(event.event_type)
         if policy is None:
             self._count("ignored_no_policy")
+            self._explain(
+                event,
+                "rejected",
+                f"no risk policy registered for event type "
+                f"'{event.event_type.value}' — candidate ignored",
+            )
             return
         key: _CorrelationKey = (event.camera_id, event.track.track_id, event.event_type)
         emit: SafetyIncident | None = None
+        explain_after: RiskDecision | None = None
+        rejection: tuple[str, float | None] | None = None
         with self._lock:
             suppressed_until = self._suppressed_until.get(key)
             if suppressed_until is not None and event.observed_at < suppressed_until:
                 self._count_locked("suppressed_after_dismissal")
-                return
-            if event.confidence < policy.min_event_confidence:
+                remaining = (suppressed_until - event.observed_at).total_seconds()
+                rejection = (
+                    f"suppressed after human dismissal ({remaining:.1f}s of suppression remaining)",
+                    round(remaining, 1),
+                )
+            elif event.confidence < policy.min_event_confidence:
                 self._count_locked("suppressed_low_confidence")
-                return
-            open_incident = self._open.get(key)
-            if open_incident is not None:
+                rejection = (
+                    f"candidate confidence below policy minimum "
+                    f"({event.confidence:.2f} < {policy.min_event_confidence:.2f})",
+                    None,
+                )
+            elif (open_incident := self._open.get(key)) is not None:
                 emit = self._correlate(key, open_incident, event, policy)
+                if emit is not None:
+                    escalated = emit.severity.rank > open_incident.severity.rank
+                    explain_after = RiskDecision(
+                        at=event.observed_at,
+                        camera_id=event.camera_id,
+                        track_id=event.track.track_id,
+                        display_id=event.track.display_id,
+                        event_type=event.event_type.value,
+                        candidate_confidence=event.confidence,
+                        outcome="escalated" if escalated else "corroborated",
+                        reason=(
+                            f"candidate corroborates open incident "
+                            f"{emit.incident_id} (risk {emit.risk_confidence:.2f}, "
+                            f"severity {emit.severity.value}"
+                            + (", escalated" if escalated else "")
+                            + ")"
+                        ),
+                        risk_confidence=emit.risk_confidence,
+                        severity=emit.severity.value,
+                        incident_id=emit.incident_id,
+                        corroborating_events=len(emit.events),
+                    )
             else:
                 emit = self._maybe_open(key, event, policy)
+                if emit is not None:
+                    explain_after = RiskDecision(
+                        at=event.observed_at,
+                        camera_id=event.camera_id,
+                        track_id=event.track.track_id,
+                        display_id=event.track.display_id,
+                        event_type=event.event_type.value,
+                        candidate_confidence=event.confidence,
+                        outcome="incident_opened",
+                        reason=(
+                            f"candidate accepted: risk confidence "
+                            f"{emit.risk_confidence:.2f} -> severity "
+                            f"{emit.severity.value} -> incident created"
+                        ),
+                        risk_confidence=emit.risk_confidence,
+                        severity=emit.severity.value,
+                        incident_id=emit.incident_id,
+                        corroborating_events=len(emit.events),
+                    )
+                else:
+                    pending = len(self._corroboration.get(key, []))
+                    rejection = (
+                        f"awaiting corroboration ({pending}/"
+                        f"{policy.min_events_to_open} candidate(s) within the "
+                        f"{policy.aggregation_window_seconds:.0f}s window; "
+                        f"confidence {event.confidence:.2f} is below the "
+                        f"{policy.fast_path_confidence:.2f} fast path)",
+                        policy.aggregation_window_seconds,
+                    )
+        # Explanations are emitted OUTSIDE the lock: observers may do
+        # arbitrary work, and explanation must never risk a deadlock.
+        if rejection is not None:
+            self._explain(event, "rejected", rejection[0], seconds_remaining=rejection[1])
+            return
+        if explain_after is not None:
+            self._emit_explanation(explain_after)
         if emit is not None:
             self._emit(emit)
 
@@ -269,6 +345,39 @@ class RiskEngine:
         except Exception:
             self._count("consumer_errors")
             logger.exception("incident consumer raised; snapshot %s dropped", incident.incident_id)
+
+    def _explain(
+        self,
+        event: CandidateEvent,
+        outcome: str,
+        reason: str,
+        seconds_remaining: float | None = None,
+    ) -> None:
+        """Explanation only (Sprint 10.1): never influences the decision."""
+        if self._observer is None:
+            return
+        self._emit_explanation(
+            RiskDecision(
+                at=event.observed_at,
+                camera_id=event.camera_id,
+                track_id=event.track.track_id,
+                display_id=event.track.display_id,
+                event_type=event.event_type.value,
+                candidate_confidence=event.confidence,
+                outcome=outcome,
+                reason=reason,
+                seconds_remaining=seconds_remaining,
+            )
+        )
+
+    def _emit_explanation(self, decision: RiskDecision) -> None:
+        observer = self._observer
+        if observer is None:
+            return
+        try:
+            observer(decision)
+        except Exception:  # noqa: BLE001 - explanations must never break risk handling
+            logger.exception("risk decision observer failed; engine continues")
 
     def _count(self, name: str) -> None:
         with self._lock:

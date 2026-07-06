@@ -171,3 +171,51 @@ class TestBackupRestoreCommands:
             zf.writestr("junk.txt", "junk")
         assert run(home, "restore", str(garbage)) == 1
         assert "not a Guardian backup" in capsys.readouterr().err
+
+
+class TestDebugFunnel:
+    def test_debug_renders_the_pipeline_funnel(self, home: Path, monkeypatch, capsys) -> None:
+        payload = {
+            "status": "ok",
+            "components": {
+                "cameras": {"cameras": {"classroom-1": "healthy"}},
+                "inference": {"cameras": {"classroom-1": {"processed": 1200}}},
+                "events": {
+                    "frames_observed": 1200,
+                    "tracks_evaluated": 900,
+                    "events_emitted": {"potential_fall": 3},
+                },
+                "risk": {
+                    "opened_total": 2,
+                    "events_correlated": 1,
+                    "suppressed_low_confidence": 4,
+                    "suppressed_after_dismissal": 1,
+                },
+                "notifications": {"delivered": 2, "queue": 0},
+                "debug": {
+                    "detections": 3400,
+                    "track_evaluations": 900,
+                    "candidates": 3,
+                    "rejections": {"downward velocity too low": 700},
+                    "risk_outcomes": {"incident_opened": 2, "rejected": 5},
+                },
+            },
+        }
+        monkeypatch.setattr(cli, "_http_json", lambda url: payload)
+        assert run(home, "debug") == 0
+        out = capsys.readouterr().out
+        for stage in ("Camera", "Detection", "Tracking", "Event", "Risk", "Notification"):
+            assert stage in out
+        assert "1200 frames processed" in out
+        assert "3400 detections" in out
+        assert "2 incident(s) opened" in out
+        assert "700 × downward velocity too low" in out
+        assert "risk-debug.log" in out
+
+    def test_debug_unreachable_box(self, home: Path, capsys) -> None:
+        import socket
+
+        with socket.create_server(("127.0.0.1", 0)) as listener:
+            unused_port = listener.getsockname()[1]
+        assert run(home, "debug", "--port", str(unused_port)) == 1
+        assert "unreachable" in capsys.readouterr().err

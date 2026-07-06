@@ -29,6 +29,7 @@ import guardian_edge
 from guardian_edge.api.pairing import PairingManager
 from guardian_edge.api.server import DeviceApiServer
 from guardian_edge.application.camera_service import CameraService
+from guardian_edge.application.debugging.recorder import RiskDebugRecorder
 from guardian_edge.application.events.engine import EventEngine
 from guardian_edge.application.events.fall import PotentialFallDetector
 from guardian_edge.application.evidence.recorder import EvidenceRecorder
@@ -133,6 +134,12 @@ def build_runtime(
     channel = LocalPushChannel(home.outbox_dir)
     notification_engine = NotificationEngine(channel)
 
+    # Explainable risk debugging (Sprint 10.1): every decision leaves a
+    # trail in logs/risk-debug.log and every incident a replayable
+    # reports/<incident-id>/timeline.json. Observation only.
+    debug_recorder = RiskDebugRecorder(home.reports_dir)
+    channel.subscribe(debug_recorder.on_notification)
+
     # Evidence platform (ADR-0017): rings + recorder attach through the
     # existing consumer seams; no frozen engine knows evidence exists.
     frame_ring = FrameRingBuffer()
@@ -146,9 +153,14 @@ def build_runtime(
     def on_incident(incident: SafetyIncident) -> None:
         notification_engine(incident)  # alert first — evidence never delays it
         evidence_recorder.on_incident(incident)
+        debug_recorder.on_incident(incident)
 
-    risk_engine = RiskEngine(on_incident)
-    event_engine = EventEngine([PotentialFallDetector()], risk_engine)
+    risk_engine = RiskEngine(on_incident, observer=debug_recorder.on_risk_decision)
+    event_engine = EventEngine(
+        [PotentialFallDetector(observer=debug_recorder.on_evaluation)],
+        risk_engine,
+        evaluation_observer=debug_recorder.on_evaluation,
+    )
 
     def on_tracking(result: TrackingResult) -> None:
         tracking_gauge.observe(result)
@@ -157,7 +169,7 @@ def build_runtime(
 
     pipeline = VisionPipeline(
         detector=detector,
-        detection_consumer=lambda result: None,
+        detection_consumer=lambda result: debug_recorder.on_detections(len(result.detections)),
         tracker=ByteTracker(),
         track_consumer=on_tracking,
     )
@@ -228,6 +240,8 @@ def build_runtime(
                 **evidence_recorder.stats(),
                 "buffer": frame_ring.stats(),
             },
+            "events": lambda: {"status": "ok", **_event_status(event_engine)},
+            "debug": debug_recorder.counters,
         },
         warnings=watchdog.warnings,
         disk_path=home.root,
@@ -297,9 +311,27 @@ def _pipeline_status(pipeline: VisionPipeline) -> dict[str, Any]:
     }
 
 
+def _event_status(event_engine: EventEngine) -> dict[str, Any]:
+    stats = event_engine.stats()
+    return {
+        "frames_observed": stats.frames_observed,
+        "tracks_evaluated": stats.tracks_evaluated,
+        "events_emitted": dict(stats.events_emitted),
+        "detector_errors": stats.detector_errors,
+    }
+
+
 def _risk_status(risk_engine: RiskEngine) -> dict[str, Any]:
     stats = risk_engine.stats()
-    return {"open_incidents": stats.open_incidents, "opened_total": stats.incidents_opened}
+    return {
+        "open_incidents": stats.open_incidents,
+        "opened_total": stats.incidents_opened,
+        "candidates_received": stats.candidates_received,
+        "suppressed_low_confidence": stats.suppressed_low_confidence,
+        "suppressed_after_dismissal": stats.suppressed_after_dismissal,
+        "events_correlated": stats.events_correlated,
+        "escalations": stats.escalations,
+    }
 
 
 def _notification_status(engine: NotificationEngine) -> dict[str, Any]:

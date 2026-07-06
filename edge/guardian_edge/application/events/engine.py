@@ -17,10 +17,14 @@ from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
+from guardian_edge.application.debugging.explain import (
+    TrackEvaluation,
+    TrackEvaluationObserver,
+)
 from guardian_edge.application.events.history import TrackHistoryStore
 from guardian_edge.application.events.ports import CandidateDetector, EventConsumer
 from guardian_edge.domain.event import CandidateEvent
-from guardian_edge.domain.track import TrackingResult
+from guardian_edge.domain.track import TrackingResult, TrackState
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +53,13 @@ class EventEngine:
         event_consumer: EventConsumer,
         history: TrackHistoryStore | None = None,
         clock: Callable[[], float] = time.perf_counter,
+        evaluation_observer: TrackEvaluationObserver | None = None,
     ) -> None:
         self._detectors = tuple(detectors)
         self._event_consumer = event_consumer
         self._history = history or TrackHistoryStore()
         self._clock = clock
+        self._evaluation_observer = evaluation_observer
 
         self._lock = threading.Lock()
         self._frames_observed = 0
@@ -67,6 +73,7 @@ class EventEngine:
         """TrackConsumer entry point: one tracking result per processed frame."""
         started = self._clock()
         self._history.observe(result)
+        self._explain_unconfirmed(result)
         evaluated = 0
         for track in result.confirmed():
             evaluated += 1
@@ -103,6 +110,39 @@ class EventEngine:
                 p50_latency_ms=_percentile(ordered, 0.50),
                 p95_latency_ms=_percentile(ordered, 0.95),
             )
+
+    def _explain_unconfirmed(self, result: TrackingResult) -> None:
+        """Explanation only (Sprint 10.1): tracks the detectors never see
+        still get an explicit reason — silent failures are forbidden. This
+        changes no decision: unconfirmed tracks were always skipped."""
+        observer = self._evaluation_observer
+        if observer is None:
+            return
+        for track in result.tracks:
+            if track.state is TrackState.CONFIRMED:
+                continue
+            reason = (
+                f"track lost ({track.frames_since_update} frames without a detection)"
+                if track.state is TrackState.LOST
+                else f"track not confirmed (state: {track.state.value}, {track.hits} hit(s) so far)"
+            )
+            try:
+                observer(
+                    TrackEvaluation(
+                        at=result.captured_at,
+                        camera_id=result.camera_id,
+                        frame_id=result.frame_id,
+                        correlation_id=result.correlation_id,
+                        track_id=track.track_id,
+                        display_id=track.display_id,
+                        state=track.state.value,
+                        label=track.label,
+                        outcome="rejected",
+                        reason=reason,
+                    )
+                )
+            except Exception:  # noqa: BLE001 - explanations must never break the engine
+                logger.exception("evaluation observer failed; engine continues")
 
     def _emit(self, event: CandidateEvent) -> None:
         logger.warning(

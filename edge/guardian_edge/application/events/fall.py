@@ -13,11 +13,19 @@ trained on data the dataset platform (ADR-0010) collects.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
+from guardian_edge.application.debugging.explain import (
+    MotionAnalysis,
+    SignalBreakdown,
+    TrackEvaluation,
+    TrackEvaluationObserver,
+    motion_analysis,
+)
 from guardian_edge.application.events.features import (
     baseline_aspect_ratio,
     current_aspect_ratio,
@@ -30,6 +38,8 @@ from guardian_edge.application.events.history import TrackObservation
 from guardian_edge.domain.errors import VisionConfigurationError
 from guardian_edge.domain.event import CandidateEvent, CandidateEventType, EventSignal
 from guardian_edge.domain.track import Track, TrackingResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,11 +90,21 @@ class FallDetectorConfig:
 
 
 class PotentialFallDetector:
-    """CandidateDetector for potential falls (geometry heuristics only)."""
+    """CandidateDetector for potential falls (geometry heuristics only).
 
-    def __init__(self, config: FallDetectorConfig | None = None) -> None:
+    The optional ``observer`` receives a TrackEvaluation for EVERY decision
+    — candidate or rejection with its exact reason (Sprint 10.1). It is
+    explanation only: attaching it changes no decision and no threshold.
+    """
+
+    def __init__(
+        self,
+        config: FallDetectorConfig | None = None,
+        observer: TrackEvaluationObserver | None = None,
+    ) -> None:
         self._config = config or FallDetectorConfig()
         self._cooldown_until: dict[UUID, datetime] = {}
+        self._observer = observer
 
     @property
     def event_type(self) -> CandidateEventType:
@@ -98,15 +118,45 @@ class PotentialFallDetector:
     ) -> CandidateEvent | None:
         config = self._config
         if track.label not in config.monitored_labels:
+            self._explain(
+                track, result, history, "rejected", f"label '{track.label}' is not monitored"
+            )
             return None
-        if duration_seconds(history) < config.min_history_seconds:
+        history_span = duration_seconds(history)
+        if history_span < config.min_history_seconds:
+            self._explain(
+                track,
+                result,
+                history,
+                "rejected",
+                f"track history too short ({history_span:.2f}s < "
+                f"{config.min_history_seconds:.2f}s required)",
+            )
             return None
         cooldown_until = self._cooldown_until.get(track.track_id)
         if cooldown_until is not None and result.captured_at < cooldown_until:
+            remaining = (cooldown_until - result.captured_at).total_seconds()
+            self._explain(
+                track,
+                result,
+                history,
+                "rejected",
+                f"detector cooldown active ({remaining:.1f}s remaining after "
+                "the previous candidate on this track)",
+            )
             return None
 
         drop = peak_downward_velocity(history, config.velocity_window_seconds)
         if drop < config.drop_velocity_gate:
+            self._explain(
+                track,
+                result,
+                history,
+                "rejected",
+                f"downward velocity too low ({drop:.2f} < "
+                f"{config.drop_velocity_gate:.2f} frame-heights/s gate)",
+                peak_downward=drop,
+            )
             return None  # hard gate: no downward motion, no fall candidate
 
         drop_score = min(drop / config.drop_velocity_reference, 1.0)
@@ -130,11 +180,38 @@ class PotentialFallDetector:
             + config.weight_ground * ground_score
             + config.weight_stillness * still_score
         ) / total_weight
+        breakdown = SignalBreakdown(
+            velocity_score=round(drop_score, 3),
+            aspect_ratio_score=round(flip_score, 3),
+            ground_score=round(ground_score, 3),
+            stillness_score=round(still_score, 3),
+            confidence=round(confidence, 3),
+        )
         if confidence < config.confidence_threshold:
+            self._explain(
+                track,
+                result,
+                history,
+                "rejected",
+                f"confidence below threshold ({confidence:.2f} < "
+                f"{config.confidence_threshold:.2f})",
+                peak_downward=drop,
+                breakdown=breakdown,
+            )
             return None
 
         self._cooldown_until[track.track_id] = result.captured_at + timedelta(
             seconds=config.cooldown_seconds
+        )
+        self._explain(
+            track,
+            result,
+            history,
+            "candidate",
+            f"all signals combined to {confidence:.2f} >= "
+            f"{config.confidence_threshold:.2f} threshold",
+            peak_downward=drop,
+            breakdown=breakdown,
         )
         return CandidateEvent(
             event_id=uuid4(),
@@ -162,3 +239,44 @@ class PotentialFallDetector:
                 ),
             ),
         )
+
+    # -------------------------------------------------------- explanation
+
+    def _explain(
+        self,
+        track: Track,
+        result: TrackingResult,
+        history: Sequence[TrackObservation],
+        outcome: str,
+        reason: str,
+        peak_downward: float | None = None,
+        breakdown: SignalBreakdown | None = None,
+    ) -> None:
+        """Emit the decision explanation; never influences the decision."""
+        observer = self._observer
+        if observer is None:
+            return
+        try:
+            motion = (
+                motion_analysis(history, peak_downward)
+                if history
+                else MotionAnalysis(peak_downward_velocity=peak_downward)
+            )
+            observer(
+                TrackEvaluation(
+                    at=result.captured_at,
+                    camera_id=result.camera_id,
+                    frame_id=result.frame_id,
+                    correlation_id=result.correlation_id,
+                    track_id=track.track_id,
+                    display_id=track.display_id,
+                    state=track.state.value,
+                    label=track.label,
+                    outcome=outcome,
+                    reason=reason,
+                    motion=motion,
+                    signals=breakdown or SignalBreakdown(),
+                )
+            )
+        except Exception:  # noqa: BLE001 - explanations must never break detection
+            logger.exception("fall decision observer failed; detection unaffected")
