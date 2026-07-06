@@ -187,6 +187,45 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          // ------------------------------------------------ evidence cache
+          SectionHeader(l10n.evidenceVideoSection),
+          PanelCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.evidenceCacheLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.evidenceCacheHint,
+                    style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 8),
+                SegmentedButton<int>(
+                  key: const Key('evidence-cache-size'),
+                  segments: const [
+                    ButtonSegment(value: 100, label: Text('100 MB')),
+                    ButtonSegment(value: 250, label: Text('250 MB')),
+                    ButtonSegment(value: 500, label: Text('500 MB')),
+                  ],
+                  selected: {settings.evidenceCacheMb},
+                  onSelectionChanged: (selection) => update(
+                      settings.copyWith(evidenceCacheMb: selection.first)),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const Key('clear-evidence-cache'),
+                  icon: const Icon(Icons.delete_outline),
+                  label: Text(l10n.clearEvidenceCache),
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final cleared = l10n.cacheCleared;
+                    await ref.read(evidenceCacheProvider).clear();
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(cleared)),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
           // --------------------------------------------------------- about
           SectionHeader(l10n.aboutSection),
           PanelCard(

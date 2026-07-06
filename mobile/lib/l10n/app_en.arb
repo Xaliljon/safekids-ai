@@ -6,13 +6,11 @@
   "navCameras": "Cameras",
   "navHealth": "Health",
   "navSettings": "Settings",
-
   "connConnected": "Connected",
   "connConnecting": "Connecting…",
   "connOffline": "Offline",
   "connUnpaired": "Not paired",
   "offlineBanner": "Offline — showing cached data, reconnecting…",
-
   "dashSystemStatus": "System status",
   "statusOk": "All systems normal",
   "statusDegraded": "Degraded",
@@ -23,8 +21,12 @@
   "dashCamerasOnline": "{online} of {total} online",
   "@dashCamerasOnline": {
     "placeholders": {
-      "online": {"type": "int"},
-      "total": {"type": "int"}
+      "online": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "dashRecentIncidents": "Recent incidents",
@@ -37,17 +39,20 @@
   "minutesAgo": "{minutes} min ago",
   "@minutesAgo": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "dashViewAll": "View all",
   "boxVersion": "Box v{version}",
   "@boxVersion": {
     "placeholders": {
-      "version": {"type": "String"}
+      "version": {
+        "type": "String"
+      }
     }
   },
-
   "alertsTitle": "Notification center",
   "alertsSearchHint": "Search alerts (camera, track, text)",
   "tabUnread": "Unread",
@@ -63,7 +68,6 @@
   "today": "Today",
   "yesterday": "Yesterday",
   "potentialFall": "Potential fall",
-
   "severityLow": "Low",
   "severityMedium": "Medium",
   "severityHigh": "High",
@@ -71,7 +75,6 @@
   "statusPendingReview": "Pending review",
   "statusConfirmed": "Confirmed",
   "statusDismissed": "Dismissed",
-
   "incidentTitle": "Incident",
   "incidentTimeline": "Timeline",
   "incidentSignals": "Signals",
@@ -90,7 +93,9 @@
   "trackNumber": "Track #{number}",
   "@trackNumber": {
     "placeholders": {
-      "number": {"type": "int"}
+      "number": {
+        "type": "int"
+      }
     }
   },
   "cameraLabel": "Camera",
@@ -101,12 +106,13 @@
   "eventsCount": "{count} corroborating events",
   "@eventsCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "reviewerLabel": "Reviewed by",
   "notificationsOfIncident": "Notifications of this incident",
-
   "camerasTitle": "Cameras",
   "camerasEmpty": "No cameras reported yet — waiting for the box.",
   "cameraHealthy": "Healthy",
@@ -124,7 +130,6 @@
   "restartUnsupported": "This box version has no remote restart — automatic recovery already restarts crashed cameras and reconnects dropped streams.",
   "restartFailed": "Restart request failed — check the connection.",
   "restartRequested": "Restart requested.",
-
   "healthTitle": "System health",
   "subsystemsSection": "Subsystems",
   "hostSection": "Edge box host",
@@ -137,7 +142,9 @@
   "diskFreeGb": "{gb} GB free",
   "@diskFreeGb": {
     "placeholders": {
-      "gb": {"type": "String"}
+      "gb": {
+        "type": "String"
+      }
     }
   },
   "boxUnreachable": "Box unreachable — showing the last known snapshot.",
@@ -145,7 +152,6 @@
   "boxAddressLabel": "Box address",
   "warningsSection": "Warnings",
   "notAvailable": "n/a",
-
   "pairTitle": "Pair with Guardian Box",
   "pairIntro": "Pair this phone with the Guardian Box on your local network. Nothing leaves the building — no accounts, no cloud.",
   "pairScanQr": "Scan QR code",
@@ -164,7 +170,6 @@
   "trustedBoxLabel": "Paired box",
   "forgetBox": "Forget this box",
   "forgetBoxQuestion": "Forget this box? You will need a new pairing code to reconnect. (To revoke this phone on the box, remove it from trusted devices there.)",
-
   "settingsTitle": "Settings",
   "themeSection": "Theme",
   "themeSystem": "System",
@@ -184,9 +189,26 @@
   "criticalAlwaysAlerts": "Critical alerts always come through — quiet hours never silence an emergency.",
   "aboutSection": "About",
   "privacyNote": "Video never leaves the box. This app receives metadata only.",
-
   "retry": "Retry",
   "cancel": "Cancel",
   "ok": "OK",
-  "close": "Close"
+  "close": "Close",
+  "evidenceVideoSection": "Video evidence",
+  "aiSignalsSection": "AI signals",
+  "evidenceNone": "No video evidence for this incident (the box may predate evidence support, or the clip has expired).",
+  "evidencePreparing": "The box is preparing the clip (15 s before + 15 s after the incident)…",
+  "evidenceFailed": "Clip export failed on the box — the camera buffer was empty around the incident.",
+  "evidenceDownload": "Download clip",
+  "evidenceDownloading": "Downloading…",
+  "evidenceOfflineNote": "Saved on this phone — plays offline. Sharing is disabled by design.",
+  "evidenceOriginal": "Original",
+  "evidenceAiView": "AI analysis",
+  "playerPlay": "Play",
+  "playerPause": "Pause",
+  "playerReplay": "Replay",
+  "playerFullscreen": "Fullscreen",
+  "evidenceCacheLabel": "Evidence cache size",
+  "evidenceCacheHint": "Downloaded clips stay for offline review; oldest are removed beyond this limit.",
+  "clearEvidenceCache": "Clear downloaded evidence",
+  "cacheCleared": "Downloaded evidence removed from this phone."
 }

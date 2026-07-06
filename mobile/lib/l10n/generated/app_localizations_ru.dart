@@ -481,4 +481,63 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get close => 'Закрыть';
+
+  @override
+  String get evidenceVideoSection => 'Видеодоказательство';
+
+  @override
+  String get aiSignalsSection => 'Сигналы ИИ';
+
+  @override
+  String get evidenceNone =>
+      'Для этого инцидента нет видеодоказательства (бокс старой версии или срок хранения истёк).';
+
+  @override
+  String get evidencePreparing =>
+      'Бокс готовит клип (15 с до + 15 с после инцидента)…';
+
+  @override
+  String get evidenceFailed =>
+      'Экспорт клипа на боксе не удался — буфер камеры был пуст в момент инцидента.';
+
+  @override
+  String get evidenceDownload => 'Скачать клип';
+
+  @override
+  String get evidenceDownloading => 'Загрузка…';
+
+  @override
+  String get evidenceOfflineNote =>
+      'Сохранено на этом телефоне — работает офлайн. Пересылка отключена намеренно.';
+
+  @override
+  String get evidenceOriginal => 'Оригинал';
+
+  @override
+  String get evidenceAiView => 'Анализ ИИ';
+
+  @override
+  String get playerPlay => 'Воспроизвести';
+
+  @override
+  String get playerPause => 'Пауза';
+
+  @override
+  String get playerReplay => 'Сначала';
+
+  @override
+  String get playerFullscreen => 'На весь экран';
+
+  @override
+  String get evidenceCacheLabel => 'Размер кэша доказательств';
+
+  @override
+  String get evidenceCacheHint =>
+      'Скачанные клипы доступны офлайн; старейшие удаляются сверх лимита.';
+
+  @override
+  String get clearEvidenceCache => 'Удалить скачанные доказательства';
+
+  @override
+  String get cacheCleared => 'Скачанные доказательства удалены с телефона.';
 }

@@ -481,4 +481,63 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get close => 'Yopish';
+
+  @override
+  String get evidenceVideoSection => 'Video dalil';
+
+  @override
+  String get aiSignalsSection => 'AI signallari';
+
+  @override
+  String get evidenceNone =>
+      'Bu hodisa uchun video dalil yo\'q (boks eski versiya yoki saqlash muddati o\'tgan).';
+
+  @override
+  String get evidencePreparing =>
+      'Boks klipni tayyorlamoqda (hodisadan 15 s oldin + 15 s keyin)…';
+
+  @override
+  String get evidenceFailed =>
+      'Boksda klip eksporti muvaffaqiyatsiz — hodisa paytida kamera buferi bo\'sh edi.';
+
+  @override
+  String get evidenceDownload => 'Klipni yuklab olish';
+
+  @override
+  String get evidenceDownloading => 'Yuklanmoqda…';
+
+  @override
+  String get evidenceOfflineNote =>
+      'Bu telefonda saqlandi — oflayn ishlaydi. Ulashish ataylab o\'chirilgan.';
+
+  @override
+  String get evidenceOriginal => 'Asl ko\'rinish';
+
+  @override
+  String get evidenceAiView => 'AI tahlili';
+
+  @override
+  String get playerPlay => 'Ijro etish';
+
+  @override
+  String get playerPause => 'Pauza';
+
+  @override
+  String get playerReplay => 'Boshidan';
+
+  @override
+  String get playerFullscreen => 'To\'liq ekran';
+
+  @override
+  String get evidenceCacheLabel => 'Dalillar keshi hajmi';
+
+  @override
+  String get evidenceCacheHint =>
+      'Yuklab olingan kliplar oflayn ko\'rish uchun qoladi; limitdan oshsa eskilari o\'chiriladi.';
+
+  @override
+  String get clearEvidenceCache => 'Yuklab olingan dalillarni o\'chirish';
+
+  @override
+  String get cacheCleared => 'Yuklab olingan dalillar telefondan o\'chirildi.';
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:guardian_core/guardian_core.dart';
 import 'package:safekids_mobile/src/application/box_status_api.dart';
 import 'package:safekids_mobile/src/application/device_api.dart';
+import 'package:safekids_mobile/src/application/evidence_cache.dart';
 import 'package:safekids_mobile/src/application/notification_cache.dart';
 
 NotificationMessage makeMessage({
@@ -279,6 +280,202 @@ class FakeDeviceApi implements DeviceApi {
     connectCount += 1;
     live = StreamController<NotificationMessage>();
     return live!.stream;
+  }
+
+  // ------------------------------------------------------------ evidence
+
+  List<EvidenceRecord> evidence = [];
+  bool failEvidence = false;
+  List<int> videoBytes = List<int>.generate(64, (i) => i);
+
+  /// A real decodable 1x1 PNG — Image.memory must not choke in tests.
+  List<int> thumbnailBytes = const [
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+    0x00,
+    0x00,
+    0x00,
+    0x0D,
+    0x49,
+    0x48,
+    0x44,
+    0x52,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x08,
+    0x06,
+    0x00,
+    0x00,
+    0x00,
+    0x1F,
+    0x15,
+    0xC4,
+    0x89,
+    0x00,
+    0x00,
+    0x00,
+    0x0B,
+    0x49,
+    0x44,
+    0x41,
+    0x54,
+    0x78,
+    0x9C,
+    0x63,
+    0x60,
+    0x00,
+    0x02,
+    0x00,
+    0x00,
+    0x05,
+    0x00,
+    0x01,
+    0x7A,
+    0x5E,
+    0xAB,
+    0x3F,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x49,
+    0x45,
+    0x4E,
+    0x44,
+    0xAE,
+    0x42,
+    0x60,
+    0x82
+  ];
+  final List<String> downloadedVariants = [];
+
+  @override
+  Future<List<EvidenceRecord>> listEvidence(PairedBox box) async {
+    if (failEvidence) {
+      throw Exception('box unreachable');
+    }
+    return evidence;
+  }
+
+  @override
+  Future<List<int>> downloadEvidenceVideo(
+    PairedBox box,
+    String evidenceId,
+    String variant, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (failEvidence) {
+      throw Exception('box unreachable');
+    }
+    downloadedVariants.add(variant);
+    onProgress?.call(videoBytes.length ~/ 2, videoBytes.length);
+    onProgress?.call(videoBytes.length, videoBytes.length);
+    return videoBytes;
+  }
+
+  @override
+  Future<List<int>> fetchEvidenceThumbnail(
+      PairedBox box, String evidenceId) async {
+    if (failEvidence) {
+      throw Exception('box unreachable');
+    }
+    return thumbnailBytes;
+  }
+}
+
+/// A ready evidence record wired to [makeMessage]'s incident by default.
+EvidenceRecord makeEvidenceRecord({
+  String evidenceId = 'e-1',
+  String incidentId = 'i-1',
+  String status = 'ready',
+  List<String> variants = const ['original', 'overlay'],
+  bool hasThumbnail = true,
+}) {
+  return EvidenceRecord.fromJson({
+    'evidence_id': evidenceId,
+    'incident_id': incidentId,
+    'evidence_type': 'video_clip',
+    'status': status,
+    'camera_id': 'classroom-1',
+    'correlation_id': 'c-1',
+    'created_at': '2026-07-05T12:00:30+00:00',
+    'clips': [
+      for (final variant in variants)
+        {
+          'variant': variant,
+          'file_name': 'clip.mp4.enc',
+          'size_bytes': 1024,
+          'sha256': 'aa',
+        },
+    ],
+    'thumbnail_file': hasThumbnail ? 'thumbnail.jpg.enc' : null,
+    'metadata': {
+      'duration_seconds': 30.0,
+      'fps': 10.0,
+      'width': 640,
+      'height': 480,
+      'frame_count': 300,
+      'pre_seconds': 15.0,
+      'post_seconds': 15.0,
+    },
+    'error': null,
+  });
+}
+
+/// In-memory evidence cache for tests (no filesystem).
+class InMemoryEvidenceCache implements EvidenceCache {
+  final Map<String, List<int>> files = {};
+  final List<String> accessOrder = [];
+
+  @override
+  Future<String?> pathFor(String key) async {
+    if (!files.containsKey(key)) {
+      return null;
+    }
+    accessOrder
+      ..remove(key)
+      ..add(key);
+    return '/memory/$key';
+  }
+
+  @override
+  Future<String> put(String key, List<int> bytes) async {
+    files[key] = bytes;
+    accessOrder
+      ..remove(key)
+      ..add(key);
+    return '/memory/$key';
+  }
+
+  @override
+  Future<void> enforceLimit(int maxBytes) async {
+    var total = files.values.fold<int>(0, (sum, b) => sum + b.length);
+    while (total > maxBytes && accessOrder.isNotEmpty) {
+      final oldest = accessOrder.removeAt(0);
+      total -= files.remove(oldest)?.length ?? 0;
+    }
+  }
+
+  @override
+  Future<int> totalBytes() async =>
+      files.values.fold<int>(0, (sum, b) => sum + b.length);
+
+  @override
+  Future<void> clear() async {
+    files.clear();
+    accessOrder.clear();
   }
 }
 

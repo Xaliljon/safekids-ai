@@ -5,6 +5,7 @@ import 'package:guardian_core/guardian_core.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../providers.dart';
+import 'evidence_section.dart';
 import 'format.dart';
 import 'widgets.dart';
 
@@ -153,7 +154,106 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
               ),
             ),
           ),
-          // ---------------------------------------------- review status
+          // ------------------------------------------ video (evidence)
+          SectionHeader(l10n.evidenceVideoSection),
+          EvidenceSection(incidentId: message.incidentId),
+          // ------------------------------------------------ AI signals
+          if (_details != null && _aggregateSignals(_details!).isNotEmpty) ...[
+            SectionHeader(l10n.aiSignalsSection),
+            PanelCard(
+              child: Column(
+                key: const Key('ai-signals'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final signal in _aggregateSignals(_details!))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(signal.$1),
+                              Text('${(signal.$2 * 100).round()}%',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: signal.$2.clamp(0.0, 1.0),
+                              minHeight: 5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          // -------------------------------------------- details (facts)
+          SectionHeader(l10n.incidentEvidence),
+          PanelCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _field(l10n.cameraLabel, message.cameraId),
+                _field(
+                    l10n.trackNumber(message.trackDisplayId), message.trackId),
+                _field(l10n.confidenceLabel,
+                    '${(message.confidence * 100).round()}%'),
+                if (_details != null) ...[
+                  _field(l10n.riskConfidenceLabel,
+                      '${(_details!.riskConfidence * 100).round()}%'),
+                  _field(l10n.openedAtLabel,
+                      '${formatDate(_details!.openedAt)} ${formatTime(_details!.openedAt)}'),
+                  _field(l10n.lastEventLabel,
+                      '${formatDate(_details!.lastEventAt)} ${formatTime(_details!.lastEventAt)}'),
+                ],
+                _field(l10n.eventsCount(message.eventCount), ''),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.evidenceMetadataOnly,
+                  key: const Key('evidence-note'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                ),
+              ],
+            ),
+          ),
+          // -------------------------------------------------- timeline
+          SectionHeader(l10n.incidentTimeline),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_details == null)
+            PanelCard(
+              child: Text(
+                l10n.incidentUnavailableOffline,
+                key: const Key('timeline-unavailable'),
+              ),
+            )
+          else
+            PanelCard(
+              child: Column(
+                children: [
+                  for (var i = 0; i < _details!.events.length; i++)
+                    _TimelineEvent(
+                      event: _details!.events[i],
+                      isFirst: i == 0,
+                      isLast: i == _details!.events.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          // -------------------------------------- review + decision
           SectionHeader(l10n.incidentReviewStatus),
           PanelCard(
             child: Column(
@@ -226,65 +326,6 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
               ],
             ),
           ),
-          // -------------------------------------------------- evidence
-          SectionHeader(l10n.incidentEvidence),
-          PanelCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _field(l10n.cameraLabel, message.cameraId),
-                _field(
-                    l10n.trackNumber(message.trackDisplayId), message.trackId),
-                _field(l10n.confidenceLabel,
-                    '${(message.confidence * 100).round()}%'),
-                if (_details != null) ...[
-                  _field(l10n.riskConfidenceLabel,
-                      '${(_details!.riskConfidence * 100).round()}%'),
-                  _field(l10n.openedAtLabel,
-                      '${formatDate(_details!.openedAt)} ${formatTime(_details!.openedAt)}'),
-                  _field(l10n.lastEventLabel,
-                      '${formatDate(_details!.lastEventAt)} ${formatTime(_details!.lastEventAt)}'),
-                ],
-                _field(l10n.eventsCount(message.eventCount), ''),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.evidenceMetadataOnly,
-                  key: const Key('evidence-note'),
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Theme.of(context).colorScheme.outline),
-                ),
-              ],
-            ),
-          ),
-          // -------------------------------------------------- timeline
-          SectionHeader(l10n.incidentTimeline),
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_details == null)
-            PanelCard(
-              child: Text(
-                l10n.incidentUnavailableOffline,
-                key: const Key('timeline-unavailable'),
-              ),
-            )
-          else
-            PanelCard(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _details!.events.length; i++)
-                    _TimelineEvent(
-                      event: _details!.events[i],
-                      isFirst: i == 0,
-                      isLast: i == _details!.events.length - 1,
-                    ),
-                ],
-              ),
-            ),
           // ---------------------------------------------- track history
           SectionHeader(l10n.incidentTrackHistory),
           PanelCard(
@@ -323,6 +364,23 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
         ],
       ),
     );
+  }
+
+  /// Strongest score per signal name across the whole timeline — "why the
+  /// AI raised this", at a glance (EVIDENCE_UX.md).
+  static List<(String, double)> _aggregateSignals(IncidentDetails details) {
+    final best = <String, double>{};
+    for (final event in details.events) {
+      for (final signal in event.signals) {
+        final current = best[signal.name] ?? 0;
+        if (signal.score > current) {
+          best[signal.name] = signal.score;
+        }
+      }
+    }
+    final entries = best.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return [for (final entry in entries) (entry.key, entry.value)];
   }
 
   Widget _field(String label, String value) => Padding(

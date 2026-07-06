@@ -477,4 +477,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get evidenceVideoSection => 'Video evidence';
+
+  @override
+  String get aiSignalsSection => 'AI signals';
+
+  @override
+  String get evidenceNone =>
+      'No video evidence for this incident (the box may predate evidence support, or the clip has expired).';
+
+  @override
+  String get evidencePreparing =>
+      'The box is preparing the clip (15 s before + 15 s after the incident)…';
+
+  @override
+  String get evidenceFailed =>
+      'Clip export failed on the box — the camera buffer was empty around the incident.';
+
+  @override
+  String get evidenceDownload => 'Download clip';
+
+  @override
+  String get evidenceDownloading => 'Downloading…';
+
+  @override
+  String get evidenceOfflineNote =>
+      'Saved on this phone — plays offline. Sharing is disabled by design.';
+
+  @override
+  String get evidenceOriginal => 'Original';
+
+  @override
+  String get evidenceAiView => 'AI analysis';
+
+  @override
+  String get playerPlay => 'Play';
+
+  @override
+  String get playerPause => 'Pause';
+
+  @override
+  String get playerReplay => 'Replay';
+
+  @override
+  String get playerFullscreen => 'Fullscreen';
+
+  @override
+  String get evidenceCacheLabel => 'Evidence cache size';
+
+  @override
+  String get evidenceCacheHint =>
+      'Downloaded clips stay for offline review; oldest are removed beyond this limit.';
+
+  @override
+  String get clearEvidenceCache => 'Clear downloaded evidence';
+
+  @override
+  String get cacheCleared => 'Downloaded evidence removed from this phone.';
 }

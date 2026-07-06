@@ -210,9 +210,9 @@ void main() {
       await scrollTo(tester, find.byKey(const Key('evidence-note')),
           list: const Key('incident-list'));
       expect(find.byKey(const Key('evidence-note')), findsOneWidget);
-      await scrollTo(tester, find.textContaining('downward_velocity'),
+      await scrollTo(tester, find.textContaining('downward_velocity').first,
           list: const Key('incident-list'));
-      expect(find.textContaining('downward_velocity'), findsOneWidget);
+      expect(find.textContaining('downward_velocity'), findsWidgets);
       await scrollTo(tester, find.byKey(const Key('history-n-1')),
           list: const Key('incident-list'));
       expect(find.byKey(const Key('history-n-1')), findsOneWidget);

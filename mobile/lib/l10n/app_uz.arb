@@ -6,13 +6,11 @@
   "navCameras": "Kameralar",
   "navHealth": "Tizim",
   "navSettings": "Sozlamalar",
-
   "connConnected": "Ulangan",
   "connConnecting": "Ulanmoqda…",
   "connOffline": "Oflayn",
   "connUnpaired": "Ulanmagan",
   "offlineBanner": "Oflayn — saqlangan ma'lumotlar ko'rsatilmoqda, qayta ulanmoqda…",
-
   "dashSystemStatus": "Tizim holati",
   "statusOk": "Barcha tizimlar normal",
   "statusDegraded": "Cheklangan ish",
@@ -31,7 +29,6 @@
   "minutesAgo": "{minutes} daqiqa oldin",
   "dashViewAll": "Hammasini ko'rish",
   "boxVersion": "Boks v{version}",
-
   "alertsTitle": "Bildirishnomalar markazi",
   "alertsSearchHint": "Qidirish (kamera, trek, matn)",
   "tabUnread": "Yangi",
@@ -47,7 +44,6 @@
   "today": "Bugun",
   "yesterday": "Kecha",
   "potentialFall": "Ehtimoliy yiqilish",
-
   "severityLow": "Past",
   "severityMedium": "O'rta",
   "severityHigh": "Yuqori",
@@ -55,7 +51,6 @@
   "statusPendingReview": "Tekshiruv kutilmoqda",
   "statusConfirmed": "Tasdiqlangan",
   "statusDismissed": "Rad etilgan",
-
   "incidentTitle": "Hodisa",
   "incidentTimeline": "Xronologiya",
   "incidentSignals": "Signallar",
@@ -80,7 +75,6 @@
   "eventsCount": "Tasdiqlovchi hodisalar: {count}",
   "reviewerLabel": "Tekshirdi",
   "notificationsOfIncident": "Ushbu hodisa bildirishnomalari",
-
   "camerasTitle": "Kameralar",
   "camerasEmpty": "Kameralar hali kelmadi — boks kutilmoqda.",
   "cameraHealthy": "Normal",
@@ -98,7 +92,6 @@
   "restartUnsupported": "Bu boks versiyasi masofaviy qayta ishga tushirishni qo'llamaydi — avtomatik tiklanish qulagan kameralarni o'zi qayta ishga tushiradi va uzilgan oqimlarni qayta ulaydi.",
   "restartFailed": "So'rov yuborilmadi — ulanishni tekshiring.",
   "restartRequested": "Qayta ishga tushirish so'raldi.",
-
   "healthTitle": "Tizim holati",
   "subsystemsSection": "Quyi tizimlar",
   "hostSection": "Edge boks hosti",
@@ -114,7 +107,6 @@
   "boxAddressLabel": "Boks manzili",
   "warningsSection": "Ogohlantirishlar",
   "notAvailable": "yo'q",
-
   "pairTitle": "Guardian Box bilan ulanish",
   "pairIntro": "Telefonni mahalliy tarmoqdagi Guardian Box bilan ulang. Hech narsa binodan chiqmaydi — akkauntlarsiz, bulutsiz.",
   "pairScanQr": "QR kodni skanerlash",
@@ -133,7 +125,6 @@
   "trustedBoxLabel": "Ulangan boks",
   "forgetBox": "Bu boksni unutish",
   "forgetBoxQuestion": "Bu boks unutilsinmi? Qayta ulanish uchun yangi kod kerak bo'ladi. (Bu telefonni boks tomonida bekor qilish uchun uni u yerdagi ishonchli qurilmalardan o'chiring.)",
-
   "settingsTitle": "Sozlamalar",
   "themeSection": "Mavzu",
   "themeSystem": "Tizim bo'yicha",
@@ -153,9 +144,26 @@
   "criticalAlwaysAlerts": "Kritik ogohlantirishlar doim yetib boradi — tinch soatlar favqulodda holatni o'chirmaydi.",
   "aboutSection": "Ilova haqida",
   "privacyNote": "Video hech qachon boksdan chiqmaydi. Ilova faqat metama'lumot oladi.",
-
   "retry": "Qayta urinish",
   "cancel": "Bekor qilish",
   "ok": "OK",
-  "close": "Yopish"
+  "close": "Yopish",
+  "evidenceVideoSection": "Video dalil",
+  "aiSignalsSection": "AI signallari",
+  "evidenceNone": "Bu hodisa uchun video dalil yo'q (boks eski versiya yoki saqlash muddati o'tgan).",
+  "evidencePreparing": "Boks klipni tayyorlamoqda (hodisadan 15 s oldin + 15 s keyin)…",
+  "evidenceFailed": "Boksda klip eksporti muvaffaqiyatsiz — hodisa paytida kamera buferi bo'sh edi.",
+  "evidenceDownload": "Klipni yuklab olish",
+  "evidenceDownloading": "Yuklanmoqda…",
+  "evidenceOfflineNote": "Bu telefonda saqlandi — oflayn ishlaydi. Ulashish ataylab o'chirilgan.",
+  "evidenceOriginal": "Asl ko'rinish",
+  "evidenceAiView": "AI tahlili",
+  "playerPlay": "Ijro etish",
+  "playerPause": "Pauza",
+  "playerReplay": "Boshidan",
+  "playerFullscreen": "To'liq ekran",
+  "evidenceCacheLabel": "Dalillar keshi hajmi",
+  "evidenceCacheHint": "Yuklab olingan kliplar oflayn ko'rish uchun qoladi; limitdan oshsa eskilari o'chiriladi.",
+  "clearEvidenceCache": "Yuklab olingan dalillarni o'chirish",
+  "cacheCleared": "Yuklab olingan dalillar telefondan o'chirildi."
 }

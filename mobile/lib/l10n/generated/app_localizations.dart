@@ -987,6 +987,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get close;
+
+  /// No description provided for @evidenceVideoSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Video evidence'**
+  String get evidenceVideoSection;
+
+  /// No description provided for @aiSignalsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'AI signals'**
+  String get aiSignalsSection;
+
+  /// No description provided for @evidenceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No video evidence for this incident (the box may predate evidence support, or the clip has expired).'**
+  String get evidenceNone;
+
+  /// No description provided for @evidencePreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'The box is preparing the clip (15 s before + 15 s after the incident)…'**
+  String get evidencePreparing;
+
+  /// No description provided for @evidenceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip export failed on the box — the camera buffer was empty around the incident.'**
+  String get evidenceFailed;
+
+  /// No description provided for @evidenceDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download clip'**
+  String get evidenceDownload;
+
+  /// No description provided for @evidenceDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get evidenceDownloading;
+
+  /// No description provided for @evidenceOfflineNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this phone — plays offline. Sharing is disabled by design.'**
+  String get evidenceOfflineNote;
+
+  /// No description provided for @evidenceOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get evidenceOriginal;
+
+  /// No description provided for @evidenceAiView.
+  ///
+  /// In en, this message translates to:
+  /// **'AI analysis'**
+  String get evidenceAiView;
+
+  /// No description provided for @playerPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get playerPlay;
+
+  /// No description provided for @playerPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get playerPause;
+
+  /// No description provided for @playerReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get playerReplay;
+
+  /// No description provided for @playerFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Fullscreen'**
+  String get playerFullscreen;
+
+  /// No description provided for @evidenceCacheLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence cache size'**
+  String get evidenceCacheLabel;
+
+  /// No description provided for @evidenceCacheHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded clips stay for offline review; oldest are removed beyond this limit.'**
+  String get evidenceCacheHint;
+
+  /// No description provided for @clearEvidenceCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear downloaded evidence'**
+  String get clearEvidenceCache;
+
+  /// No description provided for @cacheCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded evidence removed from this phone.'**
+  String get cacheCleared;
 }
 
 class _AppLocalizationsDelegate

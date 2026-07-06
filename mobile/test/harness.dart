@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safekids_mobile/src/app.dart';
+import 'package:safekids_mobile/src/presentation/evidence_player.dart';
 import 'package:safekids_mobile/src/providers.dart';
 
 import 'fakes.dart';
 
 /// Everything a widget test needs to drive the app with fakes.
 class Harness {
-  Harness(this.api, this.statusApi, this.cache, this.container);
+  Harness(
+      this.api, this.statusApi, this.cache, this.evidenceCache, this.container);
 
   final FakeDeviceApi api;
   final FakeBoxStatusApi statusApi;
   final InMemoryCache cache;
+  final InMemoryEvidenceCache evidenceCache;
   final ProviderContainer container;
 }
 
@@ -60,12 +63,22 @@ Future<Harness> pumpApp(
   final api = FakeDeviceApi();
   final statusApi = FakeBoxStatusApi();
   final cache = InMemoryCache();
+  final evidenceCache = InMemoryEvidenceCache();
   setup?.call(api, statusApi, cache);
   final container = ProviderContainer(
     overrides: [
       deviceApiProvider.overrideWithValue(api),
       boxStatusApiProvider.overrideWithValue(statusApi),
       notificationCacheProvider.overrideWithValue(cache),
+      evidenceCacheProvider.overrideWithValue(evidenceCache),
+      // Widget tests have no platform video codecs: stub the player.
+      evidencePlayerBuilderProvider.overrideWithValue(
+        (path, key) => SizedBox(
+          key: key,
+          height: 120,
+          child: Center(child: Text('player:$path')),
+        ),
+      ),
       // No periodic timer in widget tests; polls happen via refresh().
       statusPollIntervalProvider.overrideWithValue(Duration.zero),
     ],
@@ -77,7 +90,7 @@ Future<Harness> pumpApp(
     UncontrolledProviderScope(container: container, child: const GuardianApp()),
   );
   await tester.pump();
-  final harness = Harness(api, statusApi, cache, container);
+  final harness = Harness(api, statusApi, cache, evidenceCache, container);
   _current = harness;
   return harness;
 }

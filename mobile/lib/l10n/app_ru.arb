@@ -6,13 +6,11 @@
   "navCameras": "Камеры",
   "navHealth": "Система",
   "navSettings": "Настройки",
-
   "connConnected": "Подключено",
   "connConnecting": "Подключение…",
   "connOffline": "Офлайн",
   "connUnpaired": "Не сопряжено",
   "offlineBanner": "Офлайн — показаны сохранённые данные, переподключение…",
-
   "dashSystemStatus": "Состояние системы",
   "statusOk": "Все системы в норме",
   "statusDegraded": "Сниженная работа",
@@ -31,7 +29,6 @@
   "minutesAgo": "{minutes} мин назад",
   "dashViewAll": "Показать все",
   "boxVersion": "Бокс v{version}",
-
   "alertsTitle": "Центр уведомлений",
   "alertsSearchHint": "Поиск (камера, трек, текст)",
   "tabUnread": "Новые",
@@ -47,7 +44,6 @@
   "today": "Сегодня",
   "yesterday": "Вчера",
   "potentialFall": "Возможное падение",
-
   "severityLow": "Низкая",
   "severityMedium": "Средняя",
   "severityHigh": "Высокая",
@@ -55,7 +51,6 @@
   "statusPendingReview": "Ожидает проверки",
   "statusConfirmed": "Подтверждено",
   "statusDismissed": "Отклонено",
-
   "incidentTitle": "Инцидент",
   "incidentTimeline": "Хронология",
   "incidentSignals": "Сигналы",
@@ -80,7 +75,6 @@
   "eventsCount": "Подтверждающих событий: {count}",
   "reviewerLabel": "Проверил",
   "notificationsOfIncident": "Уведомления этого инцидента",
-
   "camerasTitle": "Камеры",
   "camerasEmpty": "Камеры ещё не переданы — ждём бокс.",
   "cameraHealthy": "В норме",
@@ -98,7 +92,6 @@
   "restartUnsupported": "Эта версия бокса не поддерживает удалённый перезапуск — автоматическое восстановление само перезапускает камеры и переподключает потоки.",
   "restartFailed": "Не удалось отправить запрос — проверьте соединение.",
   "restartRequested": "Перезапуск запрошен.",
-
   "healthTitle": "Состояние системы",
   "subsystemsSection": "Подсистемы",
   "hostSection": "Хост Edge-бокса",
@@ -114,7 +107,6 @@
   "boxAddressLabel": "Адрес бокса",
   "warningsSection": "Предупреждения",
   "notAvailable": "н/д",
-
   "pairTitle": "Сопряжение с Guardian Box",
   "pairIntro": "Сопрягите телефон с Guardian Box в локальной сети. Ничего не покидает здание — без аккаунтов и облака.",
   "pairScanQr": "Сканировать QR-код",
@@ -133,7 +125,6 @@
   "trustedBoxLabel": "Сопряжённый бокс",
   "forgetBox": "Забыть этот бокс",
   "forgetBoxQuestion": "Забыть этот бокс? Для повторного подключения понадобится новый код. (Чтобы отозвать этот телефон на боксе, удалите его из доверенных устройств там.)",
-
   "settingsTitle": "Настройки",
   "themeSection": "Тема",
   "themeSystem": "Системная",
@@ -153,9 +144,26 @@
   "criticalAlwaysAlerts": "Критические оповещения приходят всегда — тихие часы не заглушают чрезвычайную ситуацию.",
   "aboutSection": "О приложении",
   "privacyNote": "Видео никогда не покидает бокс. Приложение получает только метаданные.",
-
   "retry": "Повторить",
   "cancel": "Отмена",
   "ok": "ОК",
-  "close": "Закрыть"
+  "close": "Закрыть",
+  "evidenceVideoSection": "Видеодоказательство",
+  "aiSignalsSection": "Сигналы ИИ",
+  "evidenceNone": "Для этого инцидента нет видеодоказательства (бокс старой версии или срок хранения истёк).",
+  "evidencePreparing": "Бокс готовит клип (15 с до + 15 с после инцидента)…",
+  "evidenceFailed": "Экспорт клипа на боксе не удался — буфер камеры был пуст в момент инцидента.",
+  "evidenceDownload": "Скачать клип",
+  "evidenceDownloading": "Загрузка…",
+  "evidenceOfflineNote": "Сохранено на этом телефоне — работает офлайн. Пересылка отключена намеренно.",
+  "evidenceOriginal": "Оригинал",
+  "evidenceAiView": "Анализ ИИ",
+  "playerPlay": "Воспроизвести",
+  "playerPause": "Пауза",
+  "playerReplay": "Сначала",
+  "playerFullscreen": "На весь экран",
+  "evidenceCacheLabel": "Размер кэша доказательств",
+  "evidenceCacheHint": "Скачанные клипы доступны офлайн; старейшие удаляются сверх лимита.",
+  "clearEvidenceCache": "Удалить скачанные доказательства",
+  "cacheCleared": "Скачанные доказательства удалены с телефона."
 }
