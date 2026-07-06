@@ -4,9 +4,14 @@ version = "0.1.0"
 description = "Guardian AI model development: datasets, training, evaluation, export (PyTorch -> ONNX -> TensorRT)."
 requires-python = ">=3.10"
 dependencies = [
-    # Scaffold phase — heavy dependencies land together with the first training code:
-    # torch, torchvision, opencv-python, onnx, onnxruntime
-    # Detector choice is blocked on ADR-0003 (licensing) — do not add ultralytics here.
+    # Training platform (Sprint 17, ADR-0003: no AGPL detectors — never ultralytics).
+    "torch>=2.4",          # training engine; NEVER an edge dependency
+    "numpy>=1.26",
+    "pyyaml>=6.0",         # training configs
+    "onnx>=1.16",          # export + structural validation
+    "onnxruntime>=1.20",   # export parity check + latency benchmark
+    "matplotlib>=3.8",     # visual reports (confusion matrix, curves, PDF)
+    "pillow>=10.0",        # sample image IO
 ]
 
 [dependency-groups]
