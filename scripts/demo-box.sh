@@ -1,109 +1,113 @@
 #!/usr/bin/env bash
-# SafeKids mobil ilovasini sinash uchun demo Guardian Box (macOS/Linux).
+# Demo Guardian Box for mobile-app testing (macOS/Linux) — no cameras.
 #
-#   ./scripts/demo-box.sh start    # box + health'ni ishga tushiradi, pairing kodini chiqaradi
-#   ./scripts/demo-box.sh status   # ishlayaptimi, kod nima
-#   ./scripts/demo-box.sh stop     # hammasini to'xtatadi
+#   ./scripts/demo-box.sh start    # box + health surface, prints pairing code
+#   ./scripts/demo-box.sh status   # is it running, what code
+#   ./scripts/demo-box.sh stop     # stop everything
 #
-# Nima ishlaydi:
-#   - device_demo: sun'iy yiqilish stsenariysi HAQIQIY zanjir orqali
+# What runs:
+#   - device_demo: the synthetic fall scenario through the REAL chain
 #     (tracking -> events -> risk -> notifications -> Device API :8787/:8788)
-#     — ilovaga har ~10 soniyada yangi incident keladi.
-#   - demo_health: :8790/health va /metrics — Dashboard/Kameralar/Tizim
-#     ekranlari uchun (CPU/RAM/disk — mashinaning haqiqiy ko'rsatkichlari).
-set -euo pipefail
+#     — the app receives a fresh incident every ~10 seconds.
+#   - demo_health: :8790/health and /metrics for the Dashboard/Cameras/
+#     Health screens (CPU/RAM/disk are the machine's real numbers).
+#
+# For the full pipeline with a real RTSP camera, use ./scripts/demo.sh.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUN_DIR="${DEMO_BOX_DIR:-/tmp/guardian-demo-box}"
-BOX_LOG="$RUN_DIR/box.log"
-HEALTH_LOG="$RUN_DIR/health.log"
+DEMO_BOX_DIR="${DEMO_BOX_DIR:-/tmp/guardian-demo-box}"
+BOX_LOG="$DEMO_BOX_DIR/box.log"
+BOX_PID="$DEMO_BOX_DIR/box.pid"
+HEALTH_LOG="$DEMO_BOX_DIR/health.log"
+HEALTH_PID_FILE="$DEMO_BOX_DIR/health.pid"
 
-say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-
-lan_ip() {
-    ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null \
-        || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1"
+demo_pairing_code() {
+    grep -o 'pairing code: [0-9]*' "$BOX_LOG" 2>/dev/null | tail -1 | grep -o '[0-9]*' || true
 }
-
-pairing_code() {
-    grep -o 'pairing code: [0-9]*' "$BOX_LOG" 2>/dev/null | head -1 | grep -o '[0-9]*' || true
-}
-
-alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
 print_info() {
     local code ip
-    code="$(pairing_code)"
+    code="$(demo_pairing_code)"
     ip="$(lan_ip)"
     echo
-    say "Demo Guardian Box ishlayapti"
+    say "demo Guardian Box is running (synthetic incidents)"
     cat <<EOF
 
-  Pairing kodi:        ${code:-<box.log da qidiring>}
-  Simulyator uchun:    manzil 127.0.0.1, port 8787
-  Haqiqiy telefon:     manzil $ip, port 8787 (telefon shu Wi-Fi'da bo'lsin)
-  Health tekshirish:   http://127.0.0.1:8790/health
-  Loglar:              $BOX_LOG
+    Pairing code:     ${code:-<search $BOX_LOG>}
+    Simulator:        address 127.0.0.1, port ${DEVICE_API_PORT}
+    Real phone:       address $ip, port ${DEVICE_API_PORT} (same Wi-Fi)
+    Health:           http://127.0.0.1:${HEALTH_PORT}/health
+    Logs:             $BOX_LOG
 
-Ilovani ishga tushirish:
-  cd $REPO/mobile
-  open -a Simulator && flutter run          # simulyatorda
-  flutter run -d <iphone-id>                # haqiqiy iPhone'da
+    Run the app:
+      cd $GUARDIAN_REPO/mobile
+      open -a Simulator && flutter run     # simulator
+      flutter run -d <iphone-id>           # real iPhone
 
-Ilovada: "Enter manually" -> manzil + kod -> Pair.
-Eslatma: pairing kodi BIR MARTALIK — qayta ulanish kerak bo'lsa
-'./scripts/demo-box.sh stop && ./scripts/demo-box.sh start' qiling
-(ilovadagi mavjud pairing esa qayta ishga tushirishdan keyin ham ishlayveradi).
+    In the app: "Enter manually" -> address + code -> Pair.
+    Note: the pairing code is SINGLE-USE — for a fresh pairing run
+    './scripts/demo-box.sh stop && ./scripts/demo-box.sh start'
+    (already-paired phones keep working across restarts).
 EOF
 }
 
 case "${1:-start}" in
 start)
-    if alive "$RUN_DIR/box.pid"; then
-        say "allaqachon ishlayapti"
+    need_uv; need_curl; need_workspace
+    if pid_alive "$BOX_PID"; then
+        warn "already running"
         print_info
         exit 0
     fi
-    rm -rf "$RUN_DIR"
-    mkdir -p "$RUN_DIR"
-    cd "$REPO"
+    rm -rf "$DEMO_BOX_DIR"
+    mkdir -p "$DEMO_BOX_DIR"
 
-    say "device_demo (Device API :8787/:8788) ishga tushmoqda"
-    nohup uv run python -m guardian_edge.tools.device_demo \
-        --data-dir "$RUN_DIR/data" > "$BOX_LOG" 2>&1 &
-    echo $! > "$RUN_DIR/box.pid"
+    say "starting device_demo (Device API :${DEVICE_API_PORT}/:${DEVICE_WS_PORT})"
+    (
+        cd "$GUARDIAN_REPO"
+        nohup uv run python -m guardian_edge.tools.device_demo \
+            --data-dir "$DEMO_BOX_DIR/data" > "$BOX_LOG" 2>&1 &
+        echo $! > "$BOX_PID"
+    )
 
-    say "demo_health (:8790) ishga tushmoqda"
-    nohup uv run python -m guardian_edge.tools.demo_health > "$HEALTH_LOG" 2>&1 &
-    echo $! > "$RUN_DIR/health.pid"
+    say "starting demo health surface (:${HEALTH_PORT})"
+    (
+        cd "$GUARDIAN_REPO"
+        nohup uv run python -m guardian_edge.tools.demo_health > "$HEALTH_LOG" 2>&1 &
+        echo $! > "$HEALTH_PID_FILE"
+    )
 
-    for _ in $(seq 1 30); do
-        [ -n "$(pairing_code)" ] && break
-        sleep 1
+    WAITED=0
+    while [ "$WAITED" -lt 30 ] && [ -z "$(demo_pairing_code)" ]; do
+        pid_alive "$BOX_PID" || { tail -5 "$BOX_LOG" >&2 || true; die "device_demo exited — see $BOX_LOG"; }
+        sleep 1; WAITED=$((WAITED + 1))
     done
-    if [ -z "$(pairing_code)" ]; then
-        echo "XATO: pairing kodi chiqmadi — $BOX_LOG ni tekshiring" >&2
-        exit 1
-    fi
-    curl -sf http://127.0.0.1:8790/health >/dev/null \
-        || { echo "XATO: health :8790 javob bermayapti — $HEALTH_LOG" >&2; exit 1; }
+    [ -n "$(demo_pairing_code)" ] || die "no pairing code appeared — see $BOX_LOG"
+    curl -sf "http://127.0.0.1:${HEALTH_PORT}/health" >/dev/null \
+        || die "health surface :${HEALTH_PORT} not answering — see $HEALTH_LOG"
     print_info
     ;;
 status)
-    if alive "$RUN_DIR/box.pid"; then
+    if pid_alive "$BOX_PID"; then
         print_info
     else
-        say "ishlamayapti ('./scripts/demo-box.sh start' bilan ishga tushiring)"
+        say "not running (start with: ./scripts/demo-box.sh start)"
     fi
     ;;
 stop)
-    for pid_file in "$RUN_DIR/box.pid" "$RUN_DIR/health.pid"; do
-        alive "$pid_file" && kill "$(cat "$pid_file")" 2>/dev/null
-    done
-    say "to'xtatildi"
+    STOPPED=0
+    pid_alive "$BOX_PID" && { stop_pid "$BOX_PID" "device_demo" 5; STOPPED=1; }
+    pid_alive "$HEALTH_PID_FILE" && { stop_pid "$HEALTH_PID_FILE" "demo health surface" 5; STOPPED=1; }
+    # device_demo runs through the uv wrapper; sweep its python child too.
+    STRAYS="$(pgrep -f 'guardian_edge.tools.device_demo\|guardian_edge.tools.demo_health' 2>/dev/null || true)"
+    if [ -n "$STRAYS" ]; then
+        kill $STRAYS 2>/dev/null || true
+        STOPPED=1
+    fi
+    [ "$STOPPED" -eq 1 ] && say "demo box stopped" || note "nothing was running"
     ;;
 *)
-    echo "ishlatish: $0 {start|status|stop}" >&2
+    echo "usage: $0 {start|status|stop}" >&2
     exit 2
     ;;
 esac

@@ -29,7 +29,17 @@ running on the **Guardian Edge Box** (NVIDIA Jetson / Intel N100).
 ## Quick start
 
 ```sh
-./scripts/demo.sh   # the whole platform with one command (see docs/operations/SCRIPTS.md)
+./guardian       # the front door: interactive menu (setup, demo, health, logs, ...)
+```
+
+One command runs the complete platform — see [QUICK_START.md](QUICK_START.md)
+(under ten minutes from clone). Direct commands (`./guardian demo`,
+`./guardian health`, ...) and the underlying scripts are documented in
+[docs/operations/SCRIPTS.md](docs/operations/SCRIPTS.md).
+
+For development:
+
+```sh
 make setup       # install toolchain, sync workspaces, install git hooks
 make lint        # ruff + mypy + dart analyze, everything
 make test        # all Python and Dart tests

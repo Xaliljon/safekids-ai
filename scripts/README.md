@@ -6,7 +6,7 @@ re-run, works on macOS and Linux, validates its prerequisites, and respects
 `lib/common.sh`. Full documentation with examples and recovery steps:
 [docs/operations/SCRIPTS.md](../docs/operations/SCRIPTS.md).
 
-The whole platform, one command: `./scripts/demo.sh`
+The whole platform, one command: `./guardian` (repo root — interactive menu over these scripts), or `./guardian demo` directly.
 
 | Script | Purpose |
 |---|---|

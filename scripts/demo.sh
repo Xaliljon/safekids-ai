@@ -70,6 +70,8 @@ echo
 say "Guardian AI demo is running"
 cat <<EOF
 
+    Guardian:       v$(guardian_version)
+    Model:          yolox-tiny $(model_version)
     Device API:     http://${IP}:${DEVICE_API_PORT}  (WebSocket :${DEVICE_WS_PORT})
     Health:         http://127.0.0.1:${HEALTH_PORT}/health
     Metrics:        http://127.0.0.1:${HEALTH_PORT}/metrics

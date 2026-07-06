@@ -250,3 +250,15 @@ fetch_json() { curl -sf --max-time 5 "$1"; }
 json_get() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)" 2>/dev/null; }
 
 model_installed() { [ -d "$GUARDIAN_HOME/models/yolox-tiny" ]; }
+
+# -------------------------------------------------------------- versions ----
+
+guardian_version() {
+    grep -o '__version__ = "[^"]*"' "$GUARDIAN_REPO/edge/guardian_edge/__init__.py" 2>/dev/null \
+        | cut -d'"' -f2 || echo "?"
+}
+
+model_version() {
+    find "$GUARDIAN_HOME/models/yolox-tiny" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+        -exec basename {} \; | sort | tail -1 || true
+}

@@ -12,8 +12,14 @@ human-readable message and a non-zero exit code. All scripts respect
 The whole platform, one command:
 
 ```bash
-./scripts/demo.sh
+./guardian          # interactive menu over everything below
+./guardian demo     # or non-interactive, straight to the demo
 ```
+
+`./guardian` (repo root) is the front door: an interactive menu (setup /
+demo / health / logs / metrics / backup / restore / stop / clean) with a
+dependency overview at launch and a first-run setup offer. Every menu item
+maps 1:1 to a script below and is also available as `./guardian <command>`.
 
 ## Quick reference
 

@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# Guardian AI — the front door. Clone, then:
+#
+#   ./guardian              # interactive menu
+#   ./guardian demo         # or drive it directly:
+#   ./guardian health | logs | metrics | backup | restore | stop | clean
+#   ./guardian start | restart | diagnose | reset | uninstall | demo-box
+#
+# Works on macOS, Ubuntu, Jetson (JetPack 6) and Intel N100 boxes.
+# GUARDIAN_HOME overrides the box home (default: ~/guardian).
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/lib/common.sh"
+
+SCRIPTS="$GUARDIAN_REPO/scripts"
+
+banner() {
+    printf '%s' "$C_GREEN"
+    cat <<'EOF'
+   ____                     _ _
+  / ___|_   _  __ _ _ __ __| (_) __ _ _ __
+ | |  _| | | |/ _` | '__/ _` | |/ _` | '_ \
+ | |_| | |_| | (_| | | | (_| | | (_| | | | |
+  \____|\__,_|\__,_|_|  \__,_|_|\__,_|_| |_|
+EOF
+    printf '%s' "$C_RESET"
+    printf '  %sGuardian AI v%s — privacy-first child safety on the edge%s\n' \
+        "$C_DIM" "$(guardian_version)" "$C_RESET"
+    echo
+}
+
+# Fast dependency overview (no venv spin-up beyond one cv2 import).
+check_deps() {
+    say "dependencies"
+    local missing=0
+    dep() { # name, required(1/0), version-cmd, hint
+        if command -v "$1" >/dev/null 2>&1; then
+            ok "$1 $($3 2>/dev/null | head -1)"
+        elif [ "$2" = "1" ]; then
+            err "$1 missing — $4"; missing=1
+        else
+            warn "$1 missing — $4"
+        fi
+    }
+    dep python3 1 'python3 -V' "install Python 3.10+"
+    dep uv      1 'uv --version' "run: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    dep git     1 'git --version' "install git"
+    dep ffmpeg  1 'ffmpeg -version' "brew install ffmpeg / apt install ffmpeg"
+    dep docker  0 'docker --version' "needed for the demo camera (option 2)"
+    dep flutter 0 'flutter --version' "needed only for the mobile app"
+    if [ -x "$GUARDIAN_REPO/.venv/bin/python" ]; then
+        if "$GUARDIAN_REPO/.venv/bin/python" -c "import cv2" 2>/dev/null; then
+            ok "opencv (workspace)"
+        else
+            warn "opencv broken in workspace — re-run Setup"
+        fi
+    else
+        warn "workspace not set up yet — choose 1) Setup first"
+    fi
+    return "$missing"
+}
+
+pause() {
+    [ -t 0 ] || return 0
+    echo
+    printf '%s' "${C_DIM}Press Enter to return to the menu...${C_RESET}"
+    read -r _ || true
+}
+
+# Run a child script; keep the menu alive across the child's Ctrl+C.
+run() {
+    trap ' ' INT
+    "$@" || true
+    trap - INT
+}
+
+do_action() {
+    case "$1" in
+        setup)     run "$SCRIPTS/setup.sh" ;;
+        demo)      run "$SCRIPTS/demo.sh" ;;
+        demo-box)  run "$SCRIPTS/demo-box.sh" "${2:-start}" ;;
+        start)     run "$SCRIPTS/start.sh" ;;
+        stop)      run "$SCRIPTS/stop.sh" ;;
+        restart)   run "$SCRIPTS/restart.sh" ;;
+        health)    run "$SCRIPTS/health.sh" ;;
+        diagnose)  run "$SCRIPTS/diagnose.sh" ;;
+        logs)      run "$SCRIPTS/logs.sh" "${2:-}" ;;
+        metrics)   run "$SCRIPTS/metrics.sh" "${2:-}" ;;
+        backup)    run "$SCRIPTS/backup.sh" ;;
+        restore)   run "$SCRIPTS/restore.sh" "${2:-}" ;;
+        clean)     run "$SCRIPTS/clean.sh" ;;
+        reset)     run "$SCRIPTS/reset.sh" "${2:-}" ;;
+        uninstall) run "$SCRIPTS/uninstall.sh" "${2:-}" ;;
+        deps)      check_deps ;;
+        *)         return 1 ;;
+    esac
+}
+
+menu() {
+    banner
+    if ! check_deps; then
+        echo
+        warn "required tools are missing — 1) Setup explains how to get them"
+    fi
+    # First run? Offer setup before showing the menu.
+    if [ ! -d "$GUARDIAN_REPO/.venv" ] && [ -t 0 ]; then
+        echo
+        printf '%s' "${C_YELLOW}Workspace is not set up. Run Setup now? [Y/n] ${C_RESET}"
+        read -r answer || true
+        case "${answer:-y}" in [Nn]*) ;; *) run "$SCRIPTS/setup.sh"; pause ;; esac
+    fi
+    while true; do
+        echo
+        printf '%s Guardian AI — what would you like to do?%s\n\n' "$C_BLUE" "$C_RESET"
+        cat <<EOF
+     1) Setup      — verify tools, install dependencies, fetch the model
+     2) Run Demo   — the whole platform (camera rig + Guardian Edge)
+     3) Health     — subsystem + host status at a glance
+     4) Logs       — live-tail a subsystem log
+     5) Metrics    — performance gauges
+     6) Backup     — save cameras + trusted devices
+     7) Restore    — bring the latest backup back
+     8) Stop       — gracefully stop all Guardian services
+     9) Clean      — remove caches and temporary files
+    10) Exit
+EOF
+        echo
+        printf 'Select [1-10]: '
+        read -r choice || exit 0
+        case "$choice" in
+            1)  do_action setup;    pause ;;
+            2)  do_action demo;     pause ;;
+            3)  do_action health;   pause ;;
+            4)  do_action logs ;;
+            5)  do_action metrics;  pause ;;
+            6)  do_action backup;   pause ;;
+            7)  do_action restore;  pause ;;
+            8)  do_action stop;     pause ;;
+            9)  do_action clean;    pause ;;
+            10|q|quit|exit) say "bye"; exit 0 ;;
+            *)  warn "pick a number between 1 and 10" ;;
+        esac
+    done
+}
+
+if [ $# -eq 0 ]; then
+    menu
+else
+    if ! do_action "$@"; then
+        err "unknown command: $1"
+        echo "usage: ./guardian [setup|demo|demo-box|start|stop|restart|health|diagnose|logs|metrics|backup|restore|clean|reset|uninstall|deps]" >&2
+        echo "       ./guardian            (interactive menu)" >&2
+        exit 2
+    fi
+fi
