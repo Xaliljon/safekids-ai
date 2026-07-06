@@ -50,10 +50,10 @@ if command -v docker >/dev/null 2>&1; then
     if docker info >/dev/null 2>&1; then
         ok "docker $(docker --version | awk '{print $3}' | tr -d ',') (running)"
     else
-        warn "docker installed but not running — needed for ./scripts/demo.sh"
+        warn "docker installed but not running — needed for the live demo (demo-menu.sh)"
     fi
 else
-    warn "docker not found — the demo RTSP rig (./scripts/demo.sh) needs it"
+    warn "docker not found — the live demo RTSP rig needs it"
 fi
 
 if command -v flutter >/dev/null 2>&1; then
@@ -115,6 +115,6 @@ cat <<EOF
     Install report: $GUARDIAN_HOME/reports/install-report.json
 
     Next steps:
-      ./scripts/demo.sh      # full demo: camera rig + Guardian Edge
+      ./scripts/demo-menu.sh # pick a demo (live AI / incidents / your video)
       make lint && make test # development gates
 EOF

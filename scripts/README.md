@@ -6,13 +6,14 @@ re-run, works on macOS and Linux, validates its prerequisites, and respects
 `lib/common.sh`. Full documentation with examples and recovery steps:
 [docs/operations/SCRIPTS.md](../docs/operations/SCRIPTS.md).
 
-The whole platform, one command: `./guardian` (repo root — interactive menu over these scripts), or `./guardian demo` directly.
+The whole platform, one command: `./guardian` (repo root — interactive menu over these scripts), or `./guardian demo` directly (opens the demo picker).
 
 | Script | Purpose |
 |---|---|
 | `setup.sh` | verify toolchain, install dependencies, create Guardian home, fetch model |
-| `demo.sh` | full demo: RTSP rig + Guardian Edge; Ctrl+C stops everything |
-| `demo-box.sh` | synthetic-incident box for mobile-app testing (no cameras) |
+| `demo-menu.sh` | pick a demo: live AI / incidents / custom video |
+| `demo-live.sh` | full demo: RTSP rig + Guardian Edge; Ctrl+C stops everything |
+| `demo-incidents.sh` | synthetic-incident box for mobile-app testing (no cameras) |
 | `start.sh` / `stop.sh` / `restart.sh` | Guardian Edge lifecycle (single-instance safe) |
 | `health.sh` | subsystem + host health at a glance |
 | `diagnose.sh` | full diagnostics, saves and reveals the report |

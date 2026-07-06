@@ -26,8 +26,9 @@ maps 1:1 to a script below and is also available as `./guardian <command>`.
 | Script | Purpose |
 |---|---|
 | `setup.sh` | verify toolchain, install dependencies, create home, fetch model |
-| `demo.sh` | full demo: RTSP rig + Guardian Edge, Ctrl+C stops everything |
-| `demo-box.sh` | synthetic-incident box for mobile-app testing (no cameras) |
+| `demo-menu.sh` | interactive demo picker: live AI / incidents / custom video |
+| `demo-live.sh` | full demo: RTSP rig + Guardian Edge, Ctrl+C stops everything |
+| `demo-incidents.sh` | synthetic-incident box for mobile-app testing (no cameras) |
 | `start.sh` / `stop.sh` / `restart.sh` | Guardian Edge lifecycle |
 | `health.sh` | subsystem + host health at a glance |
 | `diagnose.sh` | full diagnostics, saves and reveals the report |
@@ -62,7 +63,20 @@ Expected tail: `==> setup complete` with home/model/report paths.
 **Recovery:** every failed check names the missing tool and how to install
 it; fix and re-run (idempotent).
 
-## demo.sh
+## demo-menu.sh
+
+The demo picker (`./guardian demo` opens it):
+
+```
+ 1) Live AI Demo       — full pipeline on a synthetic RTSP camera
+ 2) Incident Demo      — synthetic fall incidents (mobile-app testing)
+ 3) Custom Video Demo  — full pipeline on YOUR video file
+ 4) Exit
+```
+
+Non-interactive: `demo-menu.sh live | incidents | video [clip.mp4]`.
+
+## demo-live.sh
 
 The one command. Steps: environment check → Docker → mediamtx (`:18554`) →
 demo RTSP stream (synthetic pattern, or `DEMO_VIDEO=clip.mp4` for real
@@ -73,21 +87,21 @@ Metrics URLs, the pairing code, home and log paths, then waits.
 **Ctrl+C stops everything** (box, stream, mediamtx).
 
 ```bash
-./scripts/demo.sh
-DEMO_VIDEO=~/clips/people.mp4 ./scripts/demo.sh
+./scripts/demo-live.sh
+DEMO_VIDEO=~/clips/people.mp4 ./scripts/demo-live.sh   # = Custom Video Demo
 ```
 
 **Recovery:** if the stream fails, see `$GUARDIAN_HOME/run/rtsp-publisher.log`;
 if the box fails, `$GUARDIAN_HOME/run/guardian-edge.log`; port busy → set
 `RTSP_PORT`. For mobile-app testing with a stream of incidents, use
-`./scripts/demo-box.sh start` instead.
+`./scripts/demo-incidents.sh start` instead.
 
 ## start.sh / stop.sh / restart.sh
 
 `start.sh` refuses a second instance (pid file **and** a stray-process
 sweep), waits until `:8790/health` answers, prints the pairing code.
 `stop.sh` gracefully stops the box (SIGTERM, 15 s grace), the demo stream,
-mediamtx (only if these scripts started it) and a running demo-box.
+mediamtx (only if these scripts started it) and a running incident demo.
 `restart.sh` restarts only the box — the camera rig keeps running; paired
 phones stay paired.
 

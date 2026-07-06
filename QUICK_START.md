@@ -64,7 +64,7 @@ In the app: *Enter manually* → the address and pairing code from the
 summary (simulator: `127.0.0.1`; real phone: the LAN address, same Wi-Fi).
 
 Want a stream of demo incidents to click through? Run
-`./guardian demo-box` instead of the full demo — it feeds a synthetic
+`./guardian demo-incidents` instead of the live demo — it feeds a synthetic
 fall scenario through the real engines every ~10 seconds.
 
 ## 4. Everyday commands
@@ -98,7 +98,7 @@ and [deploy/README.md](deploy/README.md).
 
 | Symptom | Fix |
 |---|---|
-| `docker: command not found` / not running | install/start Docker, or skip the demo camera and use `./guardian demo-box` |
+| `docker: command not found` / not running | install/start Docker, or skip the demo camera and use `./guardian demo-incidents` |
 | port 8554/18554 busy | `RTSP_PORT=28554 ./guardian demo` |
 | demo camera probe fails | the script retries 3×; if it still fails, see `~/guardian/run/rtsp-publisher.log` |
 | "already running outside our control" | `./guardian stop` sweeps strays |

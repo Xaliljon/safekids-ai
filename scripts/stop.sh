@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gracefully stop all Guardian services (box, demo rig, demo-box).
+# Gracefully stop all Guardian services (box, demo rig, incident demo).
 #
 #   ./scripts/stop.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
@@ -17,10 +17,10 @@ if [ -f "$MEDIAMTX_MARKER" ]; then
     stop_mediamtx; STOPPED=1
 fi
 
-# demo-box.sh (synthetic-incident box), if it is running
+# demo-incidents.sh (synthetic-incident box), if it is running
 DEMO_BOX_RUN="${DEMO_BOX_DIR:-/tmp/guardian-demo-box}"
 if [ -f "$DEMO_BOX_RUN/box.pid" ] && kill -0 "$(cat "$DEMO_BOX_RUN/box.pid")" 2>/dev/null; then
-    "$GUARDIAN_REPO/scripts/demo-box.sh" stop; STOPPED=1
+    "$GUARDIAN_REPO/scripts/demo-incidents.sh" stop; STOPPED=1
 fi
 
 if [ "$STOPPED" -eq 0 ]; then

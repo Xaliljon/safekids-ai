@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Guardian AI — the whole platform with one command.
 #
-#   ./scripts/demo.sh                 # rig + box, Ctrl+C stops everything
-#   DEMO_VIDEO=people.mp4 ./scripts/demo.sh   # use a real clip (detections!)
+#   ./scripts/demo-live.sh            # rig + box, Ctrl+C stops everything
+#   DEMO_VIDEO=people.mp4 ./scripts/demo-live.sh   # use a real clip (detections!)
 #
 # What runs: mediamtx (Docker) <- ffmpeg demo stream, then the real
 # guardian-edge supervisor (cameras -> detection -> tracking -> risk ->
 # notifications -> Device API + health). For synthetic fall incidents to
-# test the mobile app, see ./scripts/demo-box.sh instead.
+# test the mobile app, see ./scripts/demo-incidents.sh instead.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 # 1 ------------------------------------------------------ environment ----

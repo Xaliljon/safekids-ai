@@ -4,7 +4,7 @@
 #   ./guardian              # interactive menu
 #   ./guardian demo         # or drive it directly:
 #   ./guardian health | logs | metrics | backup | restore | stop | clean
-#   ./guardian start | restart | diagnose | reset | uninstall | demo-box
+#   ./guardian start | restart | diagnose | reset | uninstall | demo-incidents
 #
 # Works on macOS, Ubuntu, Jetson (JetPack 6) and Intel N100 boxes.
 # GUARDIAN_HOME overrides the box home (default: ~/guardian).
@@ -75,8 +75,9 @@ run() {
 do_action() {
     case "$1" in
         setup)     run "$SCRIPTS/setup.sh" ;;
-        demo)      run "$SCRIPTS/demo.sh" ;;
-        demo-box)  run "$SCRIPTS/demo-box.sh" "${2:-start}" ;;
+        demo)      run "$SCRIPTS/demo-menu.sh" ;;
+        demo-live) run "$SCRIPTS/demo-live.sh" ;;
+        demo-incidents|demo-box) run "$SCRIPTS/demo-incidents.sh" "${2:-start}" ;;
         start)     run "$SCRIPTS/start.sh" ;;
         stop)      run "$SCRIPTS/stop.sh" ;;
         restart)   run "$SCRIPTS/restart.sh" ;;
@@ -146,7 +147,7 @@ if [ $# -eq 0 ]; then
 else
     if ! do_action "$@"; then
         err "unknown command: $1"
-        echo "usage: ./guardian [setup|demo|demo-box|start|stop|restart|health|diagnose|logs|metrics|backup|restore|clean|reset|uninstall|deps]" >&2
+        echo "usage: ./guardian [setup|demo|demo-live|demo-incidents|start|stop|restart|health|diagnose|logs|metrics|backup|restore|clean|reset|uninstall|deps]" >&2
         echo "       ./guardian            (interactive menu)" >&2
         exit 2
     fi

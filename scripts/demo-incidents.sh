@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Demo Guardian Box for mobile-app testing (macOS/Linux) — no cameras.
 #
-#   ./scripts/demo-box.sh start    # box + health surface, prints pairing code
-#   ./scripts/demo-box.sh status   # is it running, what code
-#   ./scripts/demo-box.sh stop     # stop everything
+#   ./scripts/demo-incidents.sh start    # box + health surface, prints pairing code
+#   ./scripts/demo-incidents.sh status   # is it running, what code
+#   ./scripts/demo-incidents.sh stop     # stop everything
 #
 # What runs:
 #   - device_demo: the synthetic fall scenario through the REAL chain
@@ -12,7 +12,7 @@
 #   - demo_health: :8790/health and /metrics for the Dashboard/Cameras/
 #     Health screens (CPU/RAM/disk are the machine's real numbers).
 #
-# For the full pipeline with a real RTSP camera, use ./scripts/demo.sh.
+# For the full pipeline with a real RTSP camera, use ./scripts/demo-live.sh.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 DEMO_BOX_DIR="${DEMO_BOX_DIR:-/tmp/guardian-demo-box}"
@@ -46,7 +46,7 @@ print_info() {
 
     In the app: "Enter manually" -> address + code -> Pair.
     Note: the pairing code is SINGLE-USE — for a fresh pairing run
-    './scripts/demo-box.sh stop && ./scripts/demo-box.sh start'
+    './scripts/demo-incidents.sh stop && ./scripts/demo-incidents.sh start'
     (already-paired phones keep working across restarts).
 EOF
 }
@@ -91,7 +91,7 @@ status)
     if pid_alive "$BOX_PID"; then
         print_info
     else
-        say "not running (start with: ./scripts/demo-box.sh start)"
+        say "not running (start with: ./scripts/demo-incidents.sh start)"
     fi
     ;;
 stop)
