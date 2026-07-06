@@ -1,0 +1,90 @@
+{
+  "experiment_id": "2026-07-06T210822-guardian-model-v1-local-validation-d0c281",
+  "status": "completed",
+  "config": {
+    "name": "guardian-model-v1-local-validation",
+    "model": {
+      "family": "yolox-tiny",
+      "input_size": 640
+    },
+    "dataset": {
+      "registry_root": "/Users/khaliljonbakhtiyorovold/guardian-ai/datasets/registry",
+      "name": "guardian-fall-detection-v1",
+      "version": "1.0.0",
+      "train_split": "train",
+      "val_split": "val",
+      "test_split": "test",
+      "format": "video",
+      "max_samples": 256
+    },
+    "epochs": 6,
+    "batch_size": 16,
+    "optimizer": {
+      "name": "sgd",
+      "learning_rate": 0.01,
+      "weight_decay": 0.0005,
+      "momentum": 0.9
+    },
+    "scheduler": {
+      "name": "cosine",
+      "step_size": 10,
+      "gamma": 0.1
+    },
+    "augmentation": {
+      "horizontal_flip": 0.5
+    },
+    "early_stopping": {
+      "enabled": true,
+      "metric": "f1",
+      "mode": "max",
+      "patience": 10
+    },
+    "seed": 42,
+    "output_dir": "/private/tmp/claude-502/-Users-khaliljonbakhtiyorovold/f8ce20b5-fe80-4d92-a413-6a9e7a304849/scratchpad/s19/runs",
+    "device": "cpu",
+    "workers": 2,
+    "mixed_precision": false
+  },
+  "dataset": {
+    "name": "guardian-fall-detection-v1",
+    "version": "1.0.0"
+  },
+  "taxonomy": {
+    "name": "guardian-video-safety",
+    "version": "1.0.0"
+  },
+  "git_commit": "31f8184f0f94a8ae86f7882131370870e080877c",
+  "started_utc": "2026-07-06T21:08:22.708320+00:00",
+  "finished_utc": "2026-07-06T21:20:31.404626+00:00",
+  "epochs_completed": 6,
+  "metrics": {
+    "val": {
+      "precision": 0.0003,
+      "recall": 0.0938,
+      "f1": 0.0007,
+      "map50": 0.0,
+      "map50_95": 0.0,
+      "false_positives": 70226,
+      "false_negatives": 232,
+      "images": 256
+    },
+    "best_f1": 0.0007,
+    "stopped_early": false
+  },
+  "checksums": {
+    "model.onnx": "6f1961991bc89f8aefde0692f0988137a3e5ee493041afe14701960a2fd5bf3f"
+  },
+  "promotion": null,
+  "evaluated_split": "test",
+  "benchmark": {
+    "latency_ms_mean": 21.448,
+    "latency_ms_p95": 22.116,
+    "memory_mb": 169.72,
+    "size_mb": 17.82
+  },
+  "candidate": {
+    "status": "candidate",
+    "not_production": true,
+    "notes": "Local bounded validation run (256/6ep, CPU) \u2014 proves the pipeline end-to-end; REJECTED vs COCO baseline as expected at this scale. Full Colab T4 run (19,940 images, 30 epochs) required before any real promotion decision."
+  }
+}

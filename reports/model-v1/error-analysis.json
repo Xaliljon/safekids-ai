@@ -1,0 +1,220 @@
+{
+  "settings": {
+    "iou_threshold": 0.5,
+    "score_threshold": 0.25
+  },
+  "images_analyzed": 256,
+  "top_false_positive_images": [
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000100.png",
+      "false_positives": 292,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000113.png",
+      "false_positives": 292,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000097.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000098.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000099.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000111.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000143.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000144.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000167.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000168.png",
+      "false_positives": 291,
+      "false_negatives": 1,
+      "ground_truths": 1
+    }
+  ],
+  "top_false_negative_images": [
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000001.png",
+      "false_positives": 266,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000002.png",
+      "false_positives": 267,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000003.png",
+      "false_positives": 269,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000004.png",
+      "false_positives": 271,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000005.png",
+      "false_positives": 269,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000006.png",
+      "false_positives": 269,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000007.png",
+      "false_positives": 265,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000008.png",
+      "false_positives": 266,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000009.png",
+      "false_positives": 268,
+      "false_negatives": 1,
+      "ground_truths": 1
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-15-000010.png",
+      "false_positives": 267,
+      "false_negatives": 1,
+      "ground_truths": 1
+    }
+  ],
+  "worst_confidence_false_positives": [
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000002.png",
+      "predicted_label": "person",
+      "confidence": 0.8072553277015686,
+      "best_iou": 0.005419350156386084
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000001.png",
+      "predicted_label": "person",
+      "confidence": 0.806526243686676,
+      "best_iou": 0.004022219021562266
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000003.png",
+      "predicted_label": "person",
+      "confidence": 0.8054349422454834,
+      "best_iou": 0.005075175256712489
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000005.png",
+      "predicted_label": "person",
+      "confidence": 0.8003378510475159,
+      "best_iou": 0.005957396272185762
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000004.png",
+      "predicted_label": "person",
+      "confidence": 0.7971593141555786,
+      "best_iou": 0.005625688560429235
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000007.png",
+      "predicted_label": "person",
+      "confidence": 0.7968897819519043,
+      "best_iou": 0.006010668902053295
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000008.png",
+      "predicted_label": "person",
+      "confidence": 0.7967432141304016,
+      "best_iou": 0.005890280007996145
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000006.png",
+      "predicted_label": "person",
+      "confidence": 0.7958151698112488,
+      "best_iou": 0.006069844524383985
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000009.png",
+      "predicted_label": "person",
+      "confidence": 0.7924418449401855,
+      "best_iou": 0.005798142176962362
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000010.png",
+      "predicted_label": "person",
+      "confidence": 0.7904102802276611,
+      "best_iou": 0.005858349614247651
+    }
+  ],
+  "worst_localization": [
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000063.png",
+      "label": "person",
+      "confidence": 0.3689192235469818,
+      "iou": 0.5214029067356091
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000062.png",
+      "label": "person",
+      "confidence": 0.36289283633232117,
+      "iou": 0.5799210839990235
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000148.png",
+      "label": "person",
+      "confidence": 0.34346577525138855,
+      "iou": 0.5961356462778535
+    },
+    {
+      "image": "images/test/le2i-coffee-room-01-video-36-000061.png",
+      "label": "person",
+      "confidence": 0.35389792919158936,
+      "iou": 0.6614471207560092
+    }
+  ],
+  "most_confused_classes": []
+}

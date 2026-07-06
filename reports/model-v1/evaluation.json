@@ -1,0 +1,104 @@
+{
+  "overall": {
+    "precision": 0.0001,
+    "recall": 0.0156,
+    "f1": 0.0001,
+    "map50": 0.0,
+    "map50_95": 0.0,
+    "false_positives": 71885,
+    "false_negatives": 252,
+    "images": 256
+  },
+  "per_class": {
+    "adult": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0,
+      "true_positives": 0,
+      "false_positives": 8750,
+      "false_negatives": 0,
+      "ground_truths": 0
+    },
+    "child": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0,
+      "true_positives": 0,
+      "false_positives": 11939,
+      "false_negatives": 0,
+      "ground_truths": 0
+    },
+    "person": {
+      "precision": 0.0002,
+      "recall": 0.0156,
+      "f1": 0.0003,
+      "ap50": 0.0,
+      "true_positives": 4,
+      "false_positives": 25596,
+      "false_negatives": 252,
+      "ground_truths": 256
+    },
+    "unknown": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0,
+      "true_positives": 0,
+      "false_positives": 25600,
+      "false_negatives": 0,
+      "ground_truths": 0
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "adult",
+      "child",
+      "person",
+      "unknown",
+      "background"
+    ],
+    "matrix": [
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        4,
+        0,
+        252
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        8750,
+        11939,
+        25596,
+        25600,
+        0
+      ]
+    ]
+  },
+  "thresholds": {
+    "iou": 0.5,
+    "score": 0.25
+  }
+}
