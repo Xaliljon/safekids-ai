@@ -29,6 +29,7 @@ running on the **Guardian Edge Box** (NVIDIA Jetson / Intel N100).
 ## Quick start
 
 ```sh
+./scripts/demo.sh   # the whole platform with one command (see docs/operations/SCRIPTS.md)
 make setup       # install toolchain, sync workspaces, install git hooks
 make lint        # ruff + mypy + dart analyze, everything
 make test        # all Python and Dart tests
