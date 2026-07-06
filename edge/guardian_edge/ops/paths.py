@@ -51,6 +51,16 @@ class GuardianHome:
         return self.root / "logs"
 
     @property
+    def evidence_dir(self) -> Path:
+        return self.root / "evidence"
+
+    @property
+    def evidence_key_file(self) -> Path:
+        # Keys live under data/, evidence under evidence/ — separate on
+        # purpose (ADR-0017): copied clips are useless without the box.
+        return self.data_dir / "keys" / "evidence.key"
+
+    @property
     def backups_dir(self) -> Path:
         return self.root / "backups"
 
@@ -68,6 +78,7 @@ class GuardianHome:
             self.logs_dir,
             self.backups_dir,
             self.reports_dir,
+            self.evidence_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
         return self

@@ -12,6 +12,7 @@ dependencies = [
     "onnxruntime>=1.20",             # canonical inference backend (ADR-0001 §7)
     "websockets>=13.0",              # device API realtime push (ADR-0015)
     "psutil>=5.9",                   # health/performance monitoring (ADR-0016)
+    "cryptography>=43.0",            # evidence at rest: AES-256-GCM (ADR-0017)
     # TensorRT comes from the JetPack system image, never from pip.
 ]
 
