@@ -52,8 +52,11 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101"]  # assert is the point of tests
+"**/tests/**" = ["S101", "S311"]  # assert is the point of tests; synthetic fixtures use random
 "edge/guardian_edge/cli.py" = ["T201"]  # guardianctl talks to the operator via stdout
+"ai/guardian_ai/train/__init__.py" = ["T201"]  # training CLI talks to the operator via stdout
+"ai/training/scripts/**" = ["T201", "S311"]  # operator scripts print; synthetic data uses random
+"ai/training/notebooks/**" = ["T201"]  # Colab cells print for the human running them
 
 [tool.ruff.format]
 quote-style = "double"
