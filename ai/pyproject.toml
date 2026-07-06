@@ -12,6 +12,9 @@ dependencies = [
     "onnxruntime>=1.20",   # export parity check + latency benchmark
     "matplotlib>=3.8",     # visual reports (confusion matrix, curves, PDF)
     "pillow>=10.0",        # sample image IO
+    # Dataset acquisition platform (Sprint 18). ffmpeg/ffprobe are system
+    # prerequisites for video normalization (same binaries the ops scripts use).
+    "opencv-python-headless>=4.10",  # video decode / frame extraction; annotator UI is a local web page
 ]
 
 [dependency-groups]
