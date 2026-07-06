@@ -9,10 +9,11 @@ never on the Edge Box.
 | Path | Responsibility |
 |---|---|
 | `guardian_ai/datasets/` | ✅ **Dataset platform** (Sprint 7): JSONL annotation format, versioned taxonomy, ethics-bearing manifests, deterministic splits, quality + privacy gates, metrics, immutable registry — see [architecture/dataset-platform.md](../architecture/dataset-platform.md), ADR-0010. Raw data lives in `/datasets` via DVC, never here. |
-| `guardian_ai/training/` | Trainers for the V1 events: fall, zone-exit, cry. |
-| `guardian_ai/evaluation/` | Benchmarks: accuracy, FP/FN rate, latency, robustness — the full ethics-mandated metric set (docs/04). |
-| `guardian_ai/export/` | PyTorch → ONNX (→ TensorRT) export. Emits `model.onnx` + `manifest.json` conforming to `contracts/models`. |
-| `configs/` | Training/evaluation configuration (no secrets). |
+| `guardian_ai/training/` | ✅ **Training platform** (Sprint 17): frozen YAML configs, experiment records ("no anonymous models"), registry-only data access, `DetectorFamily` port (engine never depends on one detector), resumable Trainer, compare + gated promotion — see [architecture/training-platform.md](../architecture/training-platform.md). No model trained yet — real training starts after architecture review. |
+| `guardian_ai/evaluation/` | ✅ Pure-numpy detection metrics: P/R/F1, mAP@50, mAP@50-95, confusion matrix, absolute FP/FN — the full ethics-mandated metric set (docs/04). |
+| `guardian_ai/export/` | ✅ PyTorch → ONNX (opset 17, batch=1) with structural + parity validation, automatic `manifest.json`, Guardian compatibility check against the model zoo contract. |
+| `guardian_ai/train/` | ✅ CLI: `python -m guardian_ai.train` — train / resume / evaluate / export / benchmark / report / compare / promote. |
+| `training/` | Workspace: `configs/`, `datasets/` (local registry), `scripts/make_dummy_dataset.py`, `notebooks/colab.ipynb`, `runs/` (experiments, gitignored), `models/` (local zoo). |
 
 ## Boundary rules
 
