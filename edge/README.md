@@ -36,6 +36,7 @@ is **< 1 second**.
 | **Risk engine** (candidates → PENDING_REVIEW SafetyIncidents; human review API) | ✅ Implemented — see [architecture/risk-engine.md](../architecture/risk-engine.md), ADR-0013 |
 | **Notification engine** (incidents → local-first delivered notifications) | ✅ Implemented — see [architecture/notification-engine.md](../architecture/notification-engine.md), ADR-0014 |
 | **Device API** (pairing, WebSocket push, offline sync, review actions) | ✅ Implemented — `guardian_edge/api/`; ADR-0015; demo: `uv run python -m guardian_edge.tools.device_demo` |
+| **Evidence platform** (circular buffer → incident clips, original + AI overlay, AES-256, retention, audited Device API serving) | ✅ Implemented — see [architecture/evidence-platform.md](../architecture/evidence-platform.md), ADR-0017 |
 | **Operational readiness** (supervisor, `guardianctl`, installer, health `:8790`, diagnostics, watchdog, backup, structured logs) | ✅ Implemented — see [architecture/pilot-readiness.md](../architecture/pilot-readiness.md), ADR-0016; operator docs: [PILOT_GUIDE.md](../PILOT_GUIDE.md) |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
 | Audio (cry detection) | Pending (scope blocked on PRD) |

@@ -35,3 +35,4 @@ way it is (docs/03 §9: documentation explains decisions).
 | [ADR-0014](ADR-0014-notification-architecture.md) | Notification Architecture (Local-First) | Accepted |
 | [ADR-0015](ADR-0015-device-api-and-mobile.md) | Device API and Mobile Integration | Accepted |
 | [ADR-0016](ADR-0016-operational-readiness.md) | Operational Readiness (Pilot Deployment) | Accepted |
+| [ADR-0017](ADR-0017-evidence-management.md) | Evidence Management (Incident Clips) | Accepted |

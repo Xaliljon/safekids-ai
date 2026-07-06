@@ -87,7 +87,17 @@ never changed from the phone.
 - Offline cache serves every screen instantly at launch; the network only
   refreshes.
 
-## Testing (86 tests: unit, repository, widget, golden, offline)
+## Evidence (Sprint 16, ADR-0017)
+
+Incident review embeds the evidence player: `EvidenceController` (one per
+incident) asks the box for the record, fetches the thumbnail, downloads
+clips with progress and keeps them in a size-bounded LRU `EvidenceCache`
+for offline review. Two variants (original / AI analysis) cache
+independently; playback is `video_player` behind an overridable builder
+so widget tests stub the platform surface. No sharing paths exist. See
+EVIDENCE_UX.md.
+
+## Testing (108 tests: unit, repository, widget, golden, offline)
 
 - Repository & filters: shelves (unread/read/archived) are disjoint;
   search across summary/camera/track; severity/camera filters; pagination;
