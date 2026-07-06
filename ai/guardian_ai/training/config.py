@@ -27,6 +27,12 @@ class ModelConfig:
     family: str
     input_size: int = 96
     """Square input edge in pixels (family may override constraints)."""
+    pretrained: bool = False
+    """Load the family's documented pretrained checkpoint (auto-downloaded,
+    checksum-verified — Sprint 19.1). Ignored by families with no pretrained
+    path (tiny-ssd). Off by default so tests/CI never trigger a network call."""
+    checkpoint: str | None = None
+    """Path to a custom checkpoint file — overrides `pretrained` when set."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,7 +141,12 @@ class TrainingConfig:
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
-            "model": {"family": self.model.family, "input_size": self.model.input_size},
+            "model": {
+                "family": self.model.family,
+                "input_size": self.model.input_size,
+                "pretrained": self.model.pretrained,
+                "checkpoint": self.model.checkpoint,
+            },
             "dataset": {
                 "registry_root": str(self.dataset.registry_root),
                 "name": self.dataset.name,
@@ -218,6 +229,8 @@ def config_from_dict(raw: dict[str, Any], source: str = "<dict>") -> TrainingCon
             model=ModelConfig(
                 family=str(model_raw["family"]),
                 input_size=int(model_raw.get("input_size", 96)),
+                pretrained=bool(model_raw.get("pretrained", False)),
+                checkpoint=(str(model_raw["checkpoint"]) if model_raw.get("checkpoint") else None),
             ),
             dataset=DatasetConfig(
                 registry_root=Path(str(dataset_raw["registry_root"])),

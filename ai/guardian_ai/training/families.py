@@ -10,13 +10,15 @@ Families in v1:
 - ``tiny-ssd``  — a small, genuinely trainable single-object detector used
   to prove the whole platform end to end (smoke training on the dummy
   dataset). Not a production model.
-- ``yolox-tiny`` — the production family (ADR-0003: Apache-2.0). Reserved
-  through Sprint 17 pending architecture review ("do not train any model
-  yet"); unlocked in Sprint 19 for the first real training run on
-  guardian-fall-detection-v1. A from-scratch anchor-free detector
-  (CSPDarknet-tiny-style backbone, PAFPN-lite neck, decoupled head over
-  strides 8/16/32) with a simplified SimOTA-style target assignment —
-  see ``yolox_tiny.py`` for exactly what is simplified and why.
+- ``yolox-nano`` / ``yolox-tiny`` / ``yolox-s`` / ``yolox-m`` / ``yolox-l``
+  — the production families (ADR-0003: Apache-2.0), all backed by
+  ``OfficialYoloxTrainer`` wrapping the real, unmodified upstream YOLOX
+  package (Sprint 19.1 — see architecture/detector-integration.md for why
+  Guardian does not maintain its own detector training code). Sprint 19
+  shipped a from-scratch reimplementation first; an audit found it could
+  not even converge objectness on a single overfit example, while the
+  official implementation converges cleanly on the same example — that
+  finding is why the custom implementation was removed rather than fixed.
 - ``yolov8`` / ``yolo11`` — RESERVED and additionally license-blocked
   (AGPL, ADR-0003) until a compliant implementation path is approved.
 - ``rt-detr`` — RESERVED (Apache-2.0; scheduled after YOLOX).
@@ -26,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
@@ -52,12 +55,22 @@ class DetectorFamily(Protocol):
     labels_i)`` with ``boxes_i`` shaped ``(M_i, 4)`` — so the engine never
     assumes a fixed number of objects per image. Single-object families
     (tiny-ssd) simply read the first entry of each image's targets.
+
+    ``build``'s ``pretrained``/``checkpoint`` kwargs exist for families
+    that support transfer learning (Sprint 19.1 checkpoint support);
+    families without a pretrained path (tiny-ssd) just ignore them.
     """
 
     name: str
     license: str
 
-    def build(self, num_classes: int, input_size: int) -> torch.nn.Module: ...
+    def build(
+        self,
+        num_classes: int,
+        input_size: int,
+        pretrained: bool = False,
+        checkpoint: Path | None = None,
+    ) -> torch.nn.Module: ...
 
     def loss(
         self, outputs: torch.Tensor, targets: list[tuple[torch.Tensor, torch.Tensor]]
@@ -118,7 +131,13 @@ class TinySsdFamily:
     name = "tiny-ssd"
     license = "Proprietary-GuardianAI"
 
-    def build(self, num_classes: int, input_size: int) -> torch.nn.Module:
+    def build(
+        self,
+        num_classes: int,
+        input_size: int,
+        pretrained: bool = False,  # smoke family has no pretrained path; ignored
+        checkpoint: Path | None = None,  # ignored
+    ) -> torch.nn.Module:
         import torch
         from torch import nn
 
@@ -196,18 +215,23 @@ class TinySsdFamily:
 register_family(TinySsdFamily.name, TinySsdFamily)
 
 
-# -------------------------------------------------------------- yolox-tiny
+# ---------------------------------------------------- official yolox (all sizes)
 
 
-def _make_yolox_tiny() -> DetectorFamily:
-    # deferred import: yolox_tiny.py pulls in the full torch module tree,
-    # which every other family already avoids paying for at import time.
-    from guardian_ai.training.yolox_tiny import YoloxTinyFamily
+def _make_official_yolox(variant: str) -> Callable[[], DetectorFamily]:
+    def factory() -> DetectorFamily:
+        # deferred import: pulls in the full torch + upstream yolox module
+        # tree, which every other family already avoids paying for at
+        # import time.
+        from guardian_ai.training.detectors.yolox.family import OfficialYoloxTrainer
 
-    return YoloxTinyFamily()
+        return OfficialYoloxTrainer(variant)
+
+    return factory
 
 
-register_family("yolox-tiny", _make_yolox_tiny)
+for _variant in ("nano", "tiny", "s", "m", "l"):
+    register_family(f"yolox-{_variant}", _make_official_yolox(_variant))
 
 
 def family_metadata(family: DetectorFamily, num_classes: int, input_size: int) -> dict[str, Any]:

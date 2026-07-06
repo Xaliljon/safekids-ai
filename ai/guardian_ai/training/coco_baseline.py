@@ -34,8 +34,8 @@ from PIL import Image
 
 from guardian_ai.training.errors import TrainingConfigurationError
 from guardian_ai.training.families import Prediction
+from guardian_ai.training.nms import nms as _nms
 from guardian_ai.training.video_data import VideoRegistryDataModule
-from guardian_ai.training.yolox_tiny import _nms
 
 logger = logging.getLogger(__name__)
 

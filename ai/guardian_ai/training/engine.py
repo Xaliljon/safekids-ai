@@ -78,7 +78,13 @@ class Trainer:
                 taxonomy_version=self._data.taxonomy_version,
             )
         device = torch.device(config.device)
-        model = self._family.build(len(self._data.class_names), config.model.input_size)
+        checkpoint_path = Path(config.model.checkpoint) if config.model.checkpoint else None
+        model = self._family.build(
+            len(self._data.class_names),
+            config.model.input_size,
+            pretrained=config.model.pretrained,
+            checkpoint=checkpoint_path,
+        )
         model.to(device)
         optimizer = self._build_optimizer(model)
         scheduler = self._build_scheduler(optimizer)
@@ -219,6 +225,7 @@ class Trainer:
     def load_best_model(self, experiment: Experiment) -> Any:
         import torch
 
+        # pretrained=False: best.pt is about to overwrite every weight anyway
         model = self._family.build(len(self._data.class_names), self._config.model.input_size)
         best = experiment.checkpoints_dir / BEST_CHECKPOINT
         if not best.is_file():

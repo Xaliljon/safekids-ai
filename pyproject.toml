@@ -9,6 +9,21 @@ members = [
     "packages/python/guardian_common",
 ]
 
+[tool.uv]
+# yolox's setup.py checks for torch at build time (to optionally precompile a
+# C++ op) and must see our already-installed torch instead of an isolated
+# build env with none.
+no-build-isolation-package = ["yolox"]
+# yolox/requirements.txt hard-pins ancient exact versions of packages we
+# already depend on at modern versions for our OWN pipeline (export/eval);
+# we only import yolox.models (architecture + loss + assignment), never its
+# COCO-eval/export tooling, so these overrides are safe — see
+# architecture/detector-integration.md.
+override-dependencies = [
+    "onnx>=1.16",
+    "onnxruntime>=1.20",
+]
+
 [dependency-groups]
 dev = [
     "ruff>=0.8",
@@ -25,6 +40,12 @@ dev = [
 # onnxruntime ships no type stubs; isolated behind the InferenceEngine port.
 [[tool.mypy.overrides]]
 module = ["onnxruntime", "onnxruntime.*"]
+ignore_missing_imports = true
+
+# yolox ships no py.typed marker / type stubs (Sprint 19.1, ADR-0003);
+# isolated behind guardian_ai.training.detectors.yolox.
+[[tool.mypy.overrides]]
+module = ["yolox", "yolox.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

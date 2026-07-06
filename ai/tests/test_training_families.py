@@ -21,12 +21,17 @@ def test_tiny_ssd_is_available() -> None:
     assert family.license == "Proprietary-GuardianAI"
 
 
-def test_yolox_tiny_is_available_since_sprint_19() -> None:
-    # unlocked by the Sprint 19 architecture review; see yolox_tiny.py
-    assert "yolox-tiny" in available_families()
-    assert "yolox-tiny" not in reserved_families()
-    family = get_family("yolox-tiny")
-    assert family.license == "Proprietary-GuardianAI"
+@pytest.mark.parametrize("variant", ["nano", "tiny", "s", "m", "l"])
+def test_official_yolox_variants_are_available_since_sprint_19_1(variant: str) -> None:
+    # unlocked by the Sprint 19 architecture review; Sprint 19.1 swapped the
+    # custom from-scratch implementation for the official Apache-2.0 package
+    # (architecture/detector-integration.md) — see test_official_yolox.py.
+    name = f"yolox-{variant}"
+    assert name in available_families()
+    assert name not in reserved_families()
+    family = get_family(name)
+    assert family.license == "Apache-2.0"
+    assert family.name == name
 
 
 @pytest.mark.parametrize("name", ["yolov8", "yolo11", "rt-detr"])
