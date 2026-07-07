@@ -124,6 +124,17 @@ Colab-specific workaround, and it produces a `.venv` at the workspace
 root (not inside `ai/`) that the notebook prepends to `PATH` so every
 later `!python`/`!pip` cell transparently uses it.
 
+The install cell also sets `MPLBACKEND=Agg`. Colab exports `MPLBACKEND`
+pointing at its own IPython-inline matplotlib backend, which exists only
+in Colab's system Python, not our venv. `guardian_ai` imports matplotlib
+(report rendering) and matplotlib validates `MPLBACKEND` at import time,
+so without this every venv subprocess (workspace validation, `train`,
+`report`, …) crashes with `ValueError: Key backend:
+'module://matplotlib_inline.backend_inline' is not a valid value`. `Agg`
+is the headless backend those reports render with anyway; the notebook
+only ever displays charts via `IPython.display.Image` on saved PNGs,
+never in-kernel matplotlib, so forcing it is safe.
+
 ## Expected directory layout
 
 ```

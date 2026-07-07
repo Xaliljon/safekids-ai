@@ -83,6 +83,16 @@ def test_installs_via_uv_not_plain_pip(notebook: dict) -> None:
     assert "pip install -q -e" not in code
 
 
+def test_forces_headless_matplotlib_backend(notebook: dict) -> None:
+    """Regression: Colab sets MPLBACKEND to an inline backend absent from
+    our uv venv, so matplotlib crashes at import in every venv subprocess
+    (validation, train, report). The notebook must force Agg."""
+    code = "\n".join(
+        "".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code"
+    )
+    assert 'os.environ["MPLBACKEND"] = "Agg"' in code
+
+
 def test_explains_each_step_in_markdown(notebook: dict) -> None:
     markdown = [cell for cell in notebook["cells"] if cell["cell_type"] == "markdown"]
     code = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"]
