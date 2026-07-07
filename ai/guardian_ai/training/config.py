@@ -8,6 +8,7 @@ knob is a lie in the experiment record.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ _OPTIMIZERS = ("sgd", "adam", "adamw")
 _SCHEDULERS = ("none", "cosine", "step")
 _ES_MODES = ("max", "min")
 _DATASET_FORMATS = ("images", "video")
+DATASET_ROOT_ENV = "GUARDIAN_DATASET_ROOT"
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +200,31 @@ class TrainingConfig:
         }
 
 
+def _resolve_registry_root(dataset_raw: dict[str, Any]) -> Path:
+    """Datasets are external assets, never a hardcoded repository-relative
+    path. An explicit ``registry_root`` in the config wins (this is how the
+    smoke/dummy fixture configs keep working with no environment setup at
+    all); otherwise resolve through ``GUARDIAN_DATASET_ROOT`` — the one
+    directory a developer points at their local copy, a Colab mount, or a
+    training server's data volume."""
+    explicit = dataset_raw.get("registry_root")
+    if explicit:
+        return Path(str(explicit))
+    root = os.environ.get(DATASET_ROOT_ENV)
+    if not root:
+        raise TrainingConfigurationError(
+            f"dataset.registry_root is not set, and the {DATASET_ROOT_ENV} "
+            "environment variable is not set either. Datasets are external "
+            f"assets — set {DATASET_ROOT_ENV} to the directory containing "
+            "your registry/ (e.g. /Users/<you>/AI-Datasets on Mac, "
+            "/opt/guardian/datasets on Linux, or "
+            "/content/drive/MyDrive/guardian-ai-datasets on Colab), or set "
+            "dataset.registry_root explicitly in this config. See "
+            "docs/COLAB_SETUP.md."
+        )
+    return Path(root) / "registry"
+
+
 def load_config(path: Path) -> TrainingConfig:
     """Load and validate a training YAML; unknown keys are errors."""
     try:
@@ -246,7 +273,7 @@ def config_from_dict(raw: dict[str, Any], source: str = "<dict>") -> TrainingCon
                 checkpoint=(str(model_raw["checkpoint"]) if model_raw.get("checkpoint") else None),
             ),
             dataset=DatasetConfig(
-                registry_root=Path(str(dataset_raw["registry_root"])),
+                registry_root=_resolve_registry_root(dataset_raw),
                 name=str(dataset_raw["name"]),
                 version=(str(dataset_raw["version"]) if dataset_raw.get("version") else None),
                 train_split=str(dataset_raw.get("train_split", "train")),

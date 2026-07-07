@@ -84,6 +84,34 @@ def test_invalid_values_fail_loudly(override: dict, message: str) -> None:
         config_from_dict({**VALID, **override})
 
 
+def test_registry_root_resolves_from_dataset_root_env_when_omitted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GUARDIAN_DATASET_ROOT", "/some/external/path")
+    raw = dict(VALID)
+    raw["dataset"] = {"name": "dummy-detection"}  # no registry_root
+    config = config_from_dict(raw)
+    assert config.dataset.registry_root == Path("/some/external/path/registry")
+
+
+def test_registry_root_missing_and_no_env_var_fails_loudly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GUARDIAN_DATASET_ROOT", raising=False)
+    raw = dict(VALID)
+    raw["dataset"] = {"name": "dummy-detection"}  # no registry_root
+    with pytest.raises(TrainingConfigurationError, match="GUARDIAN_DATASET_ROOT"):
+        config_from_dict(raw)
+
+
+def test_explicit_registry_root_overrides_dataset_root_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GUARDIAN_DATASET_ROOT", "/should/not/be/used")
+    config = config_from_dict(dict(VALID))  # VALID sets dataset.registry_root explicitly
+    assert config.dataset.registry_root == Path("registry")
+
+
 def test_missing_required_key() -> None:
     raw = dict(VALID)
     del raw["epochs"]

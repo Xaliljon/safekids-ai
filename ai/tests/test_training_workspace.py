@@ -30,7 +30,12 @@ def test_smoke_config_is_valid_and_trainable() -> None:
     get_family(config.model.family)  # must resolve
 
 
-def test_training_template_is_valid_but_gated() -> None:
+def test_training_template_is_valid_but_gated(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # training.yaml has no dataset.registry_root (Sprint 20: resolved via
+    # GUARDIAN_DATASET_ROOT, never a hardcoded repo-relative path).
+    monkeypatch.setenv("GUARDIAN_DATASET_ROOT", str(tmp_path))
     raw = yaml.safe_load((TRAINING_DIR / "configs" / "training.yaml").read_text())
     config = config_from_dict(raw, source="training.yaml")
     # rt-detr is scheduled after yolox-tiny; the reservation gate still fires loudly

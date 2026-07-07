@@ -19,7 +19,8 @@ model:
   input_size: 640
   pretrained: true
 dataset:
-  registry_root: datasets/registry
+  # registry_root omitted -> resolved from GUARDIAN_DATASET_ROOT (external
+  # asset, never a hardcoded repo-relative path; see docs/COLAB_SETUP.md)
   name: guardian-fall-detection-v1
   version: 1.0.0
   format: video              # Sprint 18 VideoDatasetRegistry training export

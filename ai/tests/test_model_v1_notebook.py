@@ -1,4 +1,4 @@
-"""Sprint 19 Colab notebook: structure smoke test (mirrors Sprint 17's)."""
+"""Sprint 19/20 Colab notebook: structure smoke test (mirrors Sprint 17's)."""
 
 from __future__ import annotations
 
@@ -31,7 +31,9 @@ def test_covers_the_mandated_sprint19_workflow(notebook: dict) -> None:
     source = "\n".join("".join(cell["source"]) for cell in notebook["cells"])
     for required in (
         "drive.mount",  # mount Google Drive
-        "git clone",  # get the repo (so edge/ is available for the COCO fetch)
+        "guardian-ai.zip",  # source-only package (scripts/package-colab.sh)
+        "guardian-dataset-v1.zip",  # dataset package (scripts/package-dataset.sh)
+        "GUARDIAN_DATASET_ROOT",  # datasets are external assets, never hardcoded
         "pip install",  # install dependencies
         "guardian-fall-detection-v1",  # the real published dataset
         "guardian_ai.train train --config ai/training/configs/model-v1.yaml",  # exact spec config
@@ -44,6 +46,14 @@ def test_covers_the_mandated_sprint19_workflow(notebook: dict) -> None:
         "guardian_ai.train candidate",  # candidate marking
     ):
         assert required in source, f"model-v1-training.ipynb is missing step: {required}"
+
+
+def test_no_longer_clones_git_or_hardcodes_the_dataset_path(notebook: dict) -> None:
+    """Sprint 20: workspace comes from zips, not git clone + a copied
+    registry folder; the dataset path is never hardcoded."""
+    source = "\n".join("".join(cell["source"]) for cell in notebook["cells"])
+    assert "git clone" not in source
+    assert "datasets/registry" not in source
 
 
 def test_explains_each_step_in_markdown(notebook: dict) -> None:

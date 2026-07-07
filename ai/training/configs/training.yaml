@@ -8,7 +8,8 @@ model:
   family: rt-detr           # gated: scheduled after yolox-tiny lands
   input_size: 640
 dataset:
-  registry_root: datasets/registry
+  # registry_root omitted -> resolved from GUARDIAN_DATASET_ROOT (external
+  # asset, never a hardcoded repo-relative path; see docs/COLAB_SETUP.md)
   name: guardian-fall-detection-v1
   version: null             # null -> latest registered version
   format: video             # Sprint 18 VideoDatasetRegistry training export
