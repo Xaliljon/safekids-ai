@@ -43,13 +43,12 @@ those are already the defaults).
 
 ## 2. Upload to Google Drive
 
-Upload both zips once to `MyDrive/guardian-ai-colab/`:
+Upload both zips once directly to the root of `MyDrive`:
 
 ```
 MyDrive/
-  guardian-ai-colab/
-    guardian-ai.zip
-    guardian-dataset-v1.zip
+  guardian-ai.zip
+  guardian-dataset-v1.zip
 ```
 
 ## 3. Run the notebook
@@ -66,19 +65,21 @@ Mount Google Drive
         │
         ▼
 Extract guardian-ai.zip     -> /content/guardian-ai
-        │
+        │  (aborts with a clear error if the zip is missing or extraction
+        │   didn't produce ai/pyproject.toml)
         ▼
 pip install -e ai
         │
         ▼
-Extract guardian-dataset-v1.zip -> /content/guardian-ai-datasets (local disk,
+Extract guardian-dataset-v1.zip -> /content/datasets (local disk,
         │                           not Drive — Drive reads are slow)
         ▼
-Set GUARDIAN_DATASET_ROOT=/content/guardian-ai-datasets
-        │
+Set GUARDIAN_DATASET_ROOT=/content/datasets   (automatic — no manual
+        │                                       %env/export step)
         ▼
-Validate workspace (registry checksum re-verification — a bad
-        │            extraction fails here, not mid-training)
+Validate workspace: /content/datasets/registry must exist, then every
+        │            file's checksum is re-verified — a missing or
+        │            corrupt extraction aborts here, not mid-training
         ▼
 Train -> Evaluate -> Error Analysis -> Qualitative -> Export
         -> Benchmark -> COCO Comparison -> Candidate
@@ -86,6 +87,11 @@ Train -> Evaluate -> Error Analysis -> Qualitative -> Export
         ▼
 Copy artifacts back to MyDrive/guardian-ai-models/model-v1/
 ```
+
+Every one of these steps raises a `RuntimeError` with an exact, actionable
+message on failure — under Colab's Run All, an uncaught exception stops
+execution at that cell rather than limping forward with a half-built
+workspace and failing confusingly three cells later.
 
 If Colab disconnects mid-run, reconnect and re-run the mount/extract/install
 cells (idempotent — extraction always overwrites), then
@@ -117,7 +123,7 @@ This is exactly what `guardian-dataset-v1.zip` extracts, and exactly what
 |---|---|
 | macOS | `/Users/<you>/AI-Datasets` |
 | Linux | `/opt/guardian/datasets` |
-| Colab | `/content/guardian-ai-datasets` (set automatically by the notebook) |
+| Colab | `/content/datasets` (set automatically by the notebook, zero manual steps) |
 
 The project works unchanged on all three — nothing in source code assumes
 any of these paths; they are just where different people happen to keep

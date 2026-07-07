@@ -48,12 +48,25 @@ def test_covers_the_mandated_sprint19_workflow(notebook: dict) -> None:
         assert required in source, f"model-v1-training.ipynb is missing step: {required}"
 
 
-def test_no_longer_clones_git_or_hardcodes_the_dataset_path(notebook: dict) -> None:
+def test_no_longer_clones_git_or_copies_a_registry_folder(notebook: dict) -> None:
     """Sprint 20: workspace comes from zips, not git clone + a copied
-    registry folder; the dataset path is never hardcoded."""
+    registry folder."""
     source = "\n".join("".join(cell["source"]) for cell in notebook["cells"])
     assert "git clone" not in source
-    assert "datasets/registry" not in source
+    assert "cp -r" not in source
+
+
+def test_dataset_root_is_set_automatically_and_validated(notebook: dict) -> None:
+    """The bootstrap fix: GUARDIAN_DATASET_ROOT is set programmatically (no
+    manual %env/export step) and the registry's existence is checked before
+    training, aborting loudly rather than failing deep inside `train`."""
+    code = "\n".join(
+        "".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code"
+    )
+    assert 'os.environ["GUARDIAN_DATASET_ROOT"]' in code
+    assert '"/content/datasets"' in code
+    assert "registry_dir.is_dir()" in code
+    assert "raise RuntimeError" in code
 
 
 def test_explains_each_step_in_markdown(notebook: dict) -> None:
