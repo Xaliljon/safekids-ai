@@ -68,8 +68,8 @@ Extract guardian-ai.zip     -> /content/guardian-ai
         │  (aborts with a clear error if the zip is missing or extraction
         │   didn't produce ai/pyproject.toml)
         ▼
-pip install -e ai
-        │
+pip install uv, then uv sync --project ai   (NOT plain `pip install -e ai`
+        │                                     — see "Why uv, not pip" below)
         ▼
 Extract guardian-dataset-v1.zip -> /content/datasets (local disk,
         │                           not Drive — Drive reads are slow)
@@ -96,6 +96,33 @@ workspace and failing confusingly three cells later.
 If Colab disconnects mid-run, reconnect and re-run the mount/extract/install
 cells (idempotent — extraction always overwrites), then
 `guardian_ai.train resume --run <dir>` picks up from the last checkpoint.
+
+## Why `uv`, not `pip install -e ai`
+
+`guardian_ai` depends on the real, unmodified upstream YOLOX (Sprint
+19.1's `DetectorFamily` wrapper around it, never a vendored copy — see
+[architecture/training-platform.md](../architecture/training-platform.md)
+and [architecture/detector-integration.md](../architecture/detector-integration.md)).
+That dependency is pinned to an exact git commit and needs two
+`[tool.uv]`-only settings to install correctly:
+
+- `no-build-isolation-package = ["yolox"]` — its `setup.py` needs `torch`
+  importable at build time (to optionally precompile a C++ op); plain
+  pip's per-package build isolation hides it, and pip has no per-package
+  override for this (only an all-or-nothing `--no-build-isolation`, which
+  also breaks unrelated packages' own build backends).
+- `override-dependencies` — its `requirements.txt` pins ancient exact
+  `onnx`/`onnxruntime` versions that conflict with the modern versions
+  our own export/eval pipeline needs; pip has no equivalent override
+  mechanism.
+
+Plain `pip install -e ai` reliably fails with
+`AssertionError: torch is required for pre-compiling ops, please install
+it first` — reproduced and confirmed in a clean venv. `uv sync --project
+ai` is the same install path local development and CI already use, not a
+Colab-specific workaround, and it produces a `.venv` at the workspace
+root (not inside `ai/`) that the notebook prepends to `PATH` so every
+later `!python`/`!pip` cell transparently uses it.
 
 ## Expected directory layout
 

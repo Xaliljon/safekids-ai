@@ -248,6 +248,36 @@ has not happened — see
 [reports/model-v1/sprint-20-status.md](../reports/model-v1/sprint-20-status.md)
 for the full handoff.
 
+## Colab packaging: `uv`, not `pip install -e ai` — root cause
+
+Running the real Colab bootstrap surfaced a packaging bug: plain
+`pip install -e ai` reliably fails with `AssertionError: torch is
+required for pre-compiling ops, please install it first` (reproduced and
+confirmed in a clean venv). This is **not** a reason to vendor YOLOX —
+Sprint 19.1 deliberately chose a real, unmodified upstream dependency
+over a vendored copy specifically to avoid maintaining someone else's
+detector code; nothing under `guardian_ai/training/detectors/yolox/` is
+YOLOX's source, only Guardian's wrapper around the installed package.
+
+The actual root cause: pinning YOLOX to an exact git commit needs two
+`[tool.uv]`-only settings that plain `pip` has no equivalent for —
+
+- `no-build-isolation-package = ["yolox"]`, because its `setup.py` needs
+  `torch` importable at build time and pip's per-package build isolation
+  hides it (pip only offers an all-or-nothing `--no-build-isolation`,
+  which breaks unrelated packages' own build backends when tried instead
+  — confirmed: it broke `guardian-ai-models`'s own `hatchling` build),
+- `override-dependencies`, because YOLOX's `requirements.txt` pins
+  ancient exact `onnx`/`onnxruntime` versions that conflict with the
+  modern versions our own export/eval pipeline requires.
+
+`uv sync --project ai` — the same install path local development and CI
+already use — honors both settings and installs cleanly on a fresh
+clone; the Colab notebook now uses it instead of plain pip (`.venv`
+lands at the workspace root, which the notebook prepends to `PATH` so
+every later cell's `!python`/`!pip` transparently uses it). Full
+walkthrough: [docs/COLAB_SETUP.md](../docs/COLAB_SETUP.md#why-uv-not-pip-install--e-ai).
+
 ## Testing
 
 388 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,

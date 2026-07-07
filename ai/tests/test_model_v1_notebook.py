@@ -69,6 +69,20 @@ def test_dataset_root_is_set_automatically_and_validated(notebook: dict) -> None
     assert "raise RuntimeError" in code
 
 
+def test_installs_via_uv_not_plain_pip(notebook: dict) -> None:
+    """Regression: `pip install -e ai` reliably fails on the pinned YOLOX
+    git dependency (torch-at-build-time + onnx/onnxruntime version
+    overrides are uv-only settings pip has no equivalent for — see
+    architecture/training-platform.md). The notebook must use uv, and
+    must never fall back to a bare `pip install -e ai`/`pip install -e .`."""
+    code = "\n".join(
+        "".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code"
+    )
+    assert "uv sync" in code
+    assert "pip install -e" not in code
+    assert "pip install -q -e" not in code
+
+
 def test_explains_each_step_in_markdown(notebook: dict) -> None:
     markdown = [cell for cell in notebook["cells"] if cell["cell_type"] == "markdown"]
     code = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"]
