@@ -24,7 +24,11 @@ from guardian_ai.evaluation.error_analysis import (
     analyze_errors,
     save_error_analysis,
 )
-from guardian_ai.export.compat import check_compatibility
+from guardian_ai.export.compat import (
+    build_validation_report,
+    check_compatibility,
+    save_validation_report,
+)
 from guardian_ai.export.manifest import build_manifest, load_manifest, save_manifest
 from guardian_ai.export.onnx_export import MODEL_FILE, export_onnx
 from guardian_ai.training.coco_baseline import evaluate_coco_baseline, fetch_official_checkpoint
@@ -142,12 +146,15 @@ def cmd_export(arguments: argparse.Namespace) -> int:
     )
     manifest_path = save_manifest(manifest, experiment.export_dir)
     passed = check_compatibility(destination, manifest)
+    validation_report = build_validation_report(destination, manifest, passed)
+    validation_path = save_validation_report(validation_report, experiment.export_dir)
     _print(
         {
             "model": str(destination),
             "manifest": str(manifest_path),
             "sha256": sha256,
             "compatibility": passed,
+            "guardian_validation": str(validation_path),
         }
     )
     return 0

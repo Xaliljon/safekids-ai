@@ -247,6 +247,15 @@ class TestOfficialYoloxTrainer:
         )
         assert model is not None  # loaded without hitting the network
 
+        from guardian_ai.training.detectors.yolox.checkpoints import sha256_of
+
+        assert model.checkpoint_sha256 == sha256_of(checkpoint_path)
+
+    def test_no_checkpoint_means_no_checksum(self) -> None:
+        family = OfficialYoloxTrainer("tiny")
+        model = family.build(num_classes=4, input_size=64, pretrained=False)
+        assert model.checkpoint_sha256 is None
+
     def test_exports_and_validates_onnx(self, tmp_path: Path) -> None:
         family = OfficialYoloxTrainer("nano")
         model = family.build(num_classes=4, input_size=64, pretrained=False)

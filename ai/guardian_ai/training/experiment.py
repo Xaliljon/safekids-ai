@@ -47,6 +47,25 @@ def _now() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
 
 
+def environment_info() -> dict[str, Any]:
+    """Python/PyTorch/CUDA/GPU versions — recorded once per run so a
+    result can never be read without knowing what produced it (Sprint 20:
+    reproducibility across a local CPU dry run and a real Colab T4 run)."""
+    import platform
+
+    info: dict[str, Any] = {"python_version": platform.python_version()}
+    try:
+        import torch
+    except ImportError:
+        info["torch_version"] = None
+        return info
+    info["torch_version"] = torch.__version__
+    info["cuda_available"] = torch.cuda.is_available()
+    info["cuda_version"] = torch.version.cuda if torch.cuda.is_available() else None
+    info["gpu_name"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    return info
+
+
 @dataclass(slots=True)
 class Experiment:
     """One isolated training run and its permanent record."""
@@ -79,8 +98,10 @@ class Experiment:
             "dataset": {"name": dataset_name, "version": dataset_version},
             "taxonomy": {"name": taxonomy_name, "version": taxonomy_version},
             "git_commit": git_commit(),
+            "environment": environment_info(),
             "started_utc": None,
             "finished_utc": None,
+            "duration_seconds": None,
             "epochs_completed": 0,
             "metrics": {},
             "checksums": {},
@@ -111,7 +132,12 @@ class Experiment:
 
     def finish(self, status: str = "completed") -> None:
         self.record["status"] = status
-        self.record["finished_utc"] = _now()
+        finished = _now()
+        self.record["finished_utc"] = finished
+        if self.record.get("started_utc"):
+            started_at = datetime.fromisoformat(self.record["started_utc"])
+            finished_at = datetime.fromisoformat(finished)
+            self.record["duration_seconds"] = (finished_at - started_at).total_seconds()
         self.save()
 
     def update(self, **fields: Any) -> None:

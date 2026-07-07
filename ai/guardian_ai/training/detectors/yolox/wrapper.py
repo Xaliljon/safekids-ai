@@ -29,6 +29,10 @@ class OfficialYoloxWrapper(nn.Module):
         super().__init__()
         self.yolox_model = yolox_model
         self._cached_images: torch.Tensor | None = None
+        self.checkpoint_sha256: str | None = None
+        """Set by the owning family's ``build()`` when a checkpoint (custom
+        or auto-downloaded pretrained) was loaded — read by ``engine.py``
+        for the experiment record, never referenced by name (duck-typed)."""
 
     def forward(self, images: torch.Tensor) -> Any:
         import torch

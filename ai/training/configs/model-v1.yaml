@@ -1,15 +1,23 @@
-# Sprint 19 — first REAL training run. Guardian Model v1 (candidate only;
-# see reports/model-v1/ for the outcome and PROMOTE/KEEP-COCO recommendation).
+# Sprint 20 — first REAL training run: Guardian Candidate Model v1
+# (candidate only; see reports/model-v1/ for the outcome and
+# PROMOTE/KEEP-COCO recommendation).
 #
-# Full-spec hyperparameters below are exactly what Sprint 19 mandates and
+# Full-spec hyperparameters below are exactly what Sprint 20 mandates and
 # what the Colab notebook (ai/training/notebooks/model-v1-training.ipynb)
 # runs on a T4 GPU via Run All. Running this same file locally on CPU/MPS
 # works but is far slower — see reports/model-v1/README.md for what was
 # actually executed in this repo versus what a full Colab run produces.
+#
+# `pretrained: true` and `scheduler.warmup_epochs: 5` are new since Sprint
+# 19.1's comparison report: SGD at this learning rate numerically diverged
+# on the official YOLOX head without warmup (disclosed there as a future
+# improvement); COCO-pretrained transfer learning is also expected to
+# converge far faster than from-scratch on this dataset's real size.
 name: guardian-model-v1
 model:
   family: yolox-tiny
   input_size: 640
+  pretrained: true
 dataset:
   registry_root: datasets/registry
   name: guardian-fall-detection-v1
@@ -24,6 +32,7 @@ optimizer:
   momentum: 0.9
 scheduler:
   name: cosine
+  warmup_epochs: 5
 augmentation:
   horizontal_flip: 0.5
 early_stopping:

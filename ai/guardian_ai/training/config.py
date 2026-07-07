@@ -66,6 +66,11 @@ class SchedulerConfig:
     name: str = "cosine"
     step_size: int = 10  # step only
     gamma: float = 0.1  # step only
+    warmup_epochs: int = 0
+    """Linear LR warmup epochs before the main scheduler takes over (0 =
+    none). Anchor-free detection heads (YOLOX) can numerically diverge at
+    the paper's SGD learning rate without this — Sprint 19.1 disclosed the
+    failure; Sprint 20 turns it on."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +126,13 @@ class TrainingConfig:
             raise TrainingConfigurationError(
                 f"unknown scheduler '{self.scheduler.name}' (one of {_SCHEDULERS})"
             )
+        if self.scheduler.warmup_epochs < 0:
+            raise TrainingConfigurationError("scheduler.warmup_epochs must be >= 0")
+        if self.scheduler.warmup_epochs >= self.epochs:
+            raise TrainingConfigurationError(
+                f"scheduler.warmup_epochs ({self.scheduler.warmup_epochs}) must be < "
+                f"epochs ({self.epochs})"
+            )
         if self.early_stopping.mode not in _ES_MODES:
             raise TrainingConfigurationError(f"early_stopping.mode must be one of {_ES_MODES}")
         if self.early_stopping.patience < 1:
@@ -169,6 +181,7 @@ class TrainingConfig:
                 "name": self.scheduler.name,
                 "step_size": self.scheduler.step_size,
                 "gamma": self.scheduler.gamma,
+                "warmup_epochs": self.scheduler.warmup_epochs,
             },
             "augmentation": {"horizontal_flip": self.augmentation.horizontal_flip},
             "early_stopping": {

@@ -216,18 +216,53 @@ run needs the Colab notebook's GPU) that proves the pipeline end to end
 and — honestly, on real numbers — loses to the COCO baseline, exactly as
 expected at that scale.
 
+## Sprint 20: closing the gaps before the real run
+
+Sprint 19.1's comparison report disclosed a real gap (SGD/lr=0.01 without
+warmup numerically diverges on the official YOLOX head) and recommended
+trying COCO-pretrained transfer learning. Sprint 20 closes both, purely
+additively — no `DetectorFamily` protocol change, no detector-specific
+code outside `training/detectors/yolox/`:
+
+- `scheduler.warmup_epochs` (`config.py`/`engine.py`): linear warmup for
+  N epochs, then the existing cosine/step schedule takes over
+  (`SequentialLR`). `model-v1.yaml` now sets `warmup_epochs: 5` and
+  `model.pretrained: true`, matching Sprint 20's mandated recipe.
+- `experiment.json` now also records `checksums.checkpoint` (whichever
+  checkpoint — custom or auto-downloaded pretrained — a family's
+  `build()` loaded, read via a duck-typed `checkpoint_sha256` attribute
+  on the returned model so `engine.py` never needs to know which
+  detector produced it) and an `environment` block (Python/PyTorch/CUDA
+  versions, GPU name) plus `duration_seconds`.
+- `export/compat.py` writes `guardian-validation.json` next to
+  `model.onnx` — the full compatibility check result (tensors, dynamic
+  shapes, batch size, manifest, license, sha256) as a durable artifact,
+  not just a stdout print.
+
+A bounded local dry run (32 images, 8 epochs, CPU, otherwise the exact
+Sprint 20 recipe) confirms the warmup fix: loss goes
+`97.6 → 41.2 → 11.7 → 10.4 → 11.7 → 10.5 → 10.8 → 8.8` — finite and
+trending down, where the same hyperparameters without warmup produced
+`inf`/`nan` in Sprint 19.1. The real 19,940-image/30-epoch T4 run itself
+has not happened — see
+[reports/model-v1/sprint-20-status.md](../reports/model-v1/sprint-20-status.md)
+for the full handoff.
+
 ## Testing
 
-348 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,
+388 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,
 `test_export_*`, `test_train_cli*.py`, `test_training_workspace.py`,
-`test_yolox_tiny.py`, `test_video_data.py`, `test_error_analysis.py`,
+`test_official_yolox.py`, `test_video_data.py`, `test_error_analysis.py`,
 `test_qualitative.py`, `test_coco_baseline.py`, `test_model_v1_notebook.py`)
-cover config validation, the experiment record, registry-only data access
-(both formats), smoke training + resume + early stopping +
-reproducibility, hand-computed metrics, report artifacts, export parity +
-rejection, the full compatibility contract, PROMOTE/REJECT verdicts, the
-promotion gates, YOLOX-Tiny's build/loss/assignment/decode/export, lazy
-video batching (including multi-worker determinism and memory bounds),
-error analysis, qualitative export, COCO-baseline decode math, and the
-CLI end to end on synthetic datasets. Coverage over the training/
-evaluation modules: 96 %.
+cover config validation (including warmup bounds), the experiment record
+(including environment/duration/checkpoint-checksum provenance),
+registry-only data access (both formats), smoke training + resume + early
+stopping + reproducibility (including warmup-scheduler resume), hand-
+computed metrics, report artifacts, export parity + rejection, the full
+compatibility contract plus its `guardian-validation.json` artifact,
+PROMOTE/REJECT verdicts, the promotion gates, the official YOLOX family's
+build/loss/decode/export/checkpoint-loading, lazy video batching
+(including multi-worker determinism and memory bounds), error analysis,
+qualitative export, COCO-baseline decode math, and the CLI end to end on
+synthetic datasets. Coverage over the training/evaluation/export modules:
+95 %.

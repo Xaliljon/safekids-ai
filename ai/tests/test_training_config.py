@@ -26,9 +26,25 @@ def test_minimal_config_gets_documented_defaults() -> None:
     config = config_from_dict(dict(VALID))
     assert config.optimizer.name == "adamw"
     assert config.scheduler.name == "cosine"
+    assert config.scheduler.warmup_epochs == 0
     assert config.early_stopping.metric == "f1"
     assert config.seed == 2026
     assert config.device == "cpu"
+
+
+def test_warmup_epochs_is_configurable() -> None:
+    config = config_from_dict({**VALID, "scheduler": {"name": "cosine", "warmup_epochs": 2}})
+    assert config.scheduler.warmup_epochs == 2
+
+
+def test_negative_warmup_epochs_is_rejected() -> None:
+    with pytest.raises(TrainingConfigurationError, match="warmup_epochs"):
+        config_from_dict({**VALID, "scheduler": {"warmup_epochs": -1}})
+
+
+def test_warmup_epochs_must_be_less_than_epochs() -> None:
+    with pytest.raises(TrainingConfigurationError, match="warmup_epochs"):
+        config_from_dict({**VALID, "epochs": 5, "scheduler": {"warmup_epochs": 5}})
 
 
 def test_yaml_roundtrip(tmp_path: Path) -> None:

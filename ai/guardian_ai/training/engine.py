@@ -86,6 +86,13 @@ class Trainer:
             checkpoint=checkpoint_path,
         )
         model.to(device)
+        # Set by a DetectorFamily.build() that loaded a checkpoint (custom or
+        # auto-downloaded pretrained) — a duck-typed, optional attribute so
+        # the engine records provenance without knowing any detector's
+        # internals (the isolation principle from Sprint 19.1).
+        checkpoint_sha256 = getattr(model, "checkpoint_sha256", None)
+        if checkpoint_sha256:
+            experiment.set_checksum("checkpoint", checkpoint_sha256)
         optimizer = self._build_optimizer(model)
         scheduler = self._build_scheduler(optimizer)
 
@@ -314,10 +321,29 @@ class Trainer:
         import torch
 
         config = self._config
+        warmup_epochs = config.scheduler.warmup_epochs
+        main = self._build_main_scheduler(optimizer, warmup_epochs)
+        if main is None or warmup_epochs <= 0:
+            return main
+        # Linear warmup then the main schedule — epoch-granular (the engine
+        # steps once per epoch, matching the rest of this scheduler API).
+        # Without this, SGD at the paper's learning rate can numerically
+        # diverge on anchor-free heads (disclosed in Sprint 19.1's
+        # comparison report; upstream YOLOX budgets 5 warmup epochs itself).
+        warmup = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1e-3, total_iters=warmup_epochs
+        )
+        return torch.optim.lr_scheduler.SequentialLR(
+            optimizer, schedulers=[warmup, main], milestones=[warmup_epochs]
+        )
+
+    def _build_main_scheduler(self, optimizer: Any, warmup_epochs: int) -> Any:
+        import torch
+
+        config = self._config
+        remaining_epochs = max(config.epochs - warmup_epochs, 1)
         if config.scheduler.name == "cosine":
-            return torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, T_max=max(config.epochs, 1)
-            )
+            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=remaining_epochs)
         if config.scheduler.name == "step":
             return torch.optim.lr_scheduler.StepLR(
                 optimizer,

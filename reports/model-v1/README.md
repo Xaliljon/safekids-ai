@@ -2,6 +2,16 @@
 
 **Recommendation: KEEP COCO. Do not promote this run.**
 
+> **Sprint 20 update:** the real first production training run (the
+> complete 19,940-image/30-epoch spec on a Colab T4) has not happened
+> yet — no GPU was available to run it directly. The platform is fully
+> prepped for it (COCO-pretrained transfer learning, a warmup scheduler
+> fix for the numerical divergence Sprint 19.1 disclosed, checkpoint
+> checksums, environment provenance, `guardian-validation.json`) and
+> verified clean end to end on a small local dry run. See
+> [`sprint-20-status.md`](sprint-20-status.md) for exactly what's done,
+> what's proven, and what a human still needs to run on Colab.
+
 > **Sprint 19.1 update:** the custom YOLOX-Tiny implementation this
 > report evaluates was **removed** after an audit traced this report's
 > false-positive explosion to the detector implementation itself, not

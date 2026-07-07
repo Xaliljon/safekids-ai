@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from guardian_ai.export.compat import ALLOWED_LICENSES, check_compatibility
+from guardian_ai.export.compat import (
+    ALLOWED_LICENSES,
+    VALIDATION_FILE,
+    build_validation_report,
+    check_compatibility,
+    save_validation_report,
+)
 from guardian_ai.export.manifest import (
     MANIFEST_FILE,
     build_manifest,
@@ -218,3 +225,38 @@ def test_dynamic_spatial_dims_are_accepted(tmp_path: Path) -> None:
     path = _handmade_model(tmp_path, onnx.TensorProto.FLOAT, [1, 3, "height", "width"])
     passed = check_compatibility(path, make_manifest(sha256_of(path)))
     assert any("dynamic supported" in clause for clause in passed)
+
+
+def test_validation_report_captures_the_full_contract(
+    artifact: tuple[Path, str], tmp_path: Path
+) -> None:
+    path, sha256 = artifact
+    manifest = make_manifest(sha256)
+    passed = check_compatibility(path, manifest)
+
+    report = build_validation_report(path, manifest, passed)
+    assert report["sha256"] == sha256
+    assert report["license"] == "Proprietary-GuardianAI"
+    assert report["batch_size"] == 1
+    assert report["inputs"][0]["name"] == "images"
+    assert report["outputs"][0]["name"] == "output"
+    assert report["dynamic_shapes"] == {"height": "static", "width": "static"}
+    assert report["compatibility_schema"] == 1
+    assert report["checks_passed"] == passed
+    assert report["manifest"] == manifest
+
+    saved = save_validation_report(report, tmp_path)
+    assert saved.name == VALIDATION_FILE
+    assert json.loads(saved.read_text()) == report
+
+
+def test_validation_report_flags_dynamic_spatial_dims(tmp_path: Path) -> None:
+    import onnx
+
+    from guardian_ai.export.onnx_export import sha256_of
+
+    path = _handmade_model(tmp_path, onnx.TensorProto.FLOAT, [1, 3, "height", "width"])
+    manifest = make_manifest(sha256_of(path))
+    passed = check_compatibility(path, manifest)
+    report = build_validation_report(path, manifest, passed)
+    assert report["dynamic_shapes"] == {"height": "dynamic", "width": "dynamic"}

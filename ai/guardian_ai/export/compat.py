@@ -17,6 +17,7 @@ Any violation raises CompatibilityError with the exact clause.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,7 @@ ALLOWED_LICENSES = frozenset(
     {"Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "Proprietary-GuardianAI"}
 )
 _FLOAT32 = 1  # onnx.TensorProto.FLOAT
+VALIDATION_FILE = "guardian-validation.json"
 
 
 def check_compatibility(model_path: Path, manifest: dict[str, Any]) -> list[str]:
@@ -128,3 +130,50 @@ def check_compatibility(model_path: Path, manifest: dict[str, Any]) -> list[str]
         raise CompatibilityError("compatibility.min_edge_version is required")
     passed.append("compatibility: schema 1, min_edge_version declared")
     return passed
+
+
+def build_validation_report(
+    model_path: Path, manifest: dict[str, Any], passed_checks: list[str]
+) -> dict[str, Any]:
+    """The full Guardian compatibility validation, as a durable artifact —
+    call only after ``check_compatibility`` has already passed."""
+    import onnx
+
+    model = onnx.load(str(model_path))
+    graph = model.graph
+    initializers = {initializer.name for initializer in graph.initializer}
+    graph_input = next(i for i in graph.input if i.name not in initializers)
+    dims = graph_input.type.tensor_type.shape.dim
+
+    def _dim(dim: Any) -> int | str | None:
+        if dim.HasField("dim_value"):
+            return int(dim.dim_value)
+        if dim.HasField("dim_param"):
+            return str(dim.dim_param)
+        return None
+
+    input_shape = [_dim(dim) for dim in dims]
+    dynamic_shapes = {
+        "height": "dynamic" if isinstance(input_shape[2], str) else "static",
+        "width": "dynamic" if isinstance(input_shape[3], str) else "static",
+    }
+    return {
+        "model_file": model_path.name,
+        "sha256": manifest["sha256"],
+        "license": manifest["license"],
+        "batch_size": input_shape[0],
+        "inputs": [{"name": graph_input.name, "dtype": "float32", "shape": input_shape}],
+        "outputs": [{"name": output.name, "dtype": "float32"} for output in graph.output],
+        "dynamic_shapes": dynamic_shapes,
+        "compatibility_schema": manifest["compatibility"]["schema"],
+        "min_edge_version": manifest["compatibility"]["min_edge_version"],
+        "manifest": manifest,
+        "checks_passed": passed_checks,
+    }
+
+
+def save_validation_report(report: dict[str, Any], directory: Path) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / VALIDATION_FILE
+    path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return path

@@ -75,13 +75,17 @@ class OfficialYoloxTrainer:
         model.apply(init_yolo)
         model.head.initialize_biases(1e-2)
 
+        checkpoint_sha256: str | None = None
         if checkpoint is not None:
             checkpoints.load_into(model, checkpoint, num_classes)
+            checkpoint_sha256 = checkpoints.sha256_of(checkpoint)
         elif pretrained:
             path = checkpoints.download_pretrained(self._variant)
             checkpoints.load_into(model, path, num_classes)
+            checkpoint_sha256 = checkpoints.sha256_of(path)
 
         self._wrapper = OfficialYoloxWrapper(model)
+        self._wrapper.checkpoint_sha256 = checkpoint_sha256
         return self._wrapper
 
     def loss(self, outputs: Any, targets: list[tuple[Any, Any]]) -> Any:

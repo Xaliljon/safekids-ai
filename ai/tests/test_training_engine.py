@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from training_fixtures import make_training_config, publish_tiny_dataset
 
-from guardian_ai.training.config import EarlyStoppingConfig
+from guardian_ai.training.config import EarlyStoppingConfig, config_from_dict
 from guardian_ai.training.engine import (
     BEST_CHECKPOINT,
     HISTORY_FILE,
@@ -110,6 +110,68 @@ def test_evaluate_full_metric_structure(registry_root: Path, tmp_path: Path) -> 
     assert evaluation["overall"]["images"] == 3
     assert set(evaluation["per_class"]) == {"adult", "child", "person"}
     assert evaluation["confusion_matrix"]["labels"][-1] == "background"
+
+
+def test_warmup_scheduler_ramps_up_then_anneals(registry_root: Path, tmp_path: Path) -> None:
+    import torch
+
+    base = make_training_config(registry_root, tmp_path / "runs", epochs=6)
+    config = config_from_dict(
+        {**base.to_dict(), "scheduler": {"name": "cosine", "warmup_epochs": 2}}
+    )
+    trainer = Trainer(config)
+    model = torch.nn.Linear(1, 1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    scheduler = trainer._build_scheduler(optimizer)
+
+    lrs = [optimizer.param_groups[0]["lr"]]
+    for _ in range(5):
+        scheduler.step()
+        lrs.append(optimizer.param_groups[0]["lr"])
+
+    assert lrs[0] < lrs[1] < lrs[2]  # linear warmup ramps up for 2 epochs
+    peak = lrs[2]
+    assert all(later <= peak + 1e-9 for later in lrs[3:])  # cosine never exceeds the peak
+    assert lrs[-1] < peak  # and anneals down from it
+
+
+def test_resume_restores_warmup_scheduler_state(registry_root: Path, tmp_path: Path) -> None:
+    base = make_training_config(registry_root, tmp_path / "runs", epochs=3)
+    config = config_from_dict(
+        {**base.to_dict(), "scheduler": {"name": "cosine", "warmup_epochs": 2}}
+    )
+    experiment = Trainer(config).train()
+
+    longer = config_from_dict({**config.to_dict(), "epochs": 5})
+    resumed = Trainer(longer).resume(experiment.run_dir)
+    assert resumed.record["epochs_completed"] == 5
+    history = json.loads((resumed.run_dir / HISTORY_FILE).read_text())
+    assert [entry["epoch"] for entry in history] == [0, 1, 2, 3, 4]
+
+
+def test_checkpoint_checksum_is_recorded_when_family_reports_one(
+    registry_root: Path, tmp_path: Path
+) -> None:
+    config = make_training_config(registry_root, tmp_path / "runs", epochs=1)
+    trainer = Trainer(config)
+    original_build = trainer.family.build
+
+    def build_with_checkpoint(*args: object, **kwargs: object) -> object:
+        model = original_build(*args, **kwargs)  # type: ignore[misc]
+        model.checkpoint_sha256 = "deadbeef" * 8  # type: ignore[attr-defined]
+        return model
+
+    trainer._family.build = build_with_checkpoint  # type: ignore[method-assign]
+    experiment = trainer.train()
+    assert experiment.record["checksums"]["checkpoint"] == "deadbeef" * 8
+
+
+def test_no_checkpoint_checksum_when_family_reports_none(
+    registry_root: Path, tmp_path: Path
+) -> None:
+    config = make_training_config(registry_root, tmp_path / "runs", epochs=1)
+    experiment = Trainer(config).train()
+    assert "checkpoint" not in experiment.record["checksums"]
 
 
 def test_reserved_family_cannot_reach_the_engine(registry_root: Path, tmp_path: Path) -> None:

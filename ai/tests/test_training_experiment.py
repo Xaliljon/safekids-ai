@@ -58,6 +58,21 @@ def test_lifecycle_and_metrics(tmp_path: Path) -> None:
     assert reloaded.record["metrics"]["val"]["f1"] == 0.5
     assert reloaded.record["checksums"]["model.onnx"] == "abc123"
     assert reloaded.record["finished_utc"] is not None
+    assert reloaded.record["duration_seconds"] is not None
+    assert reloaded.record["duration_seconds"] >= 0
+
+
+def test_create_records_environment_for_reproducibility(tmp_path: Path) -> None:
+    experiment = make_experiment(tmp_path)
+    environment = experiment.record["environment"]
+    assert environment["python_version"]
+    assert "torch_version" in environment
+
+
+def test_finish_without_start_leaves_duration_unset(tmp_path: Path) -> None:
+    experiment = make_experiment(tmp_path)
+    experiment.finish()
+    assert experiment.record["duration_seconds"] is None
 
 
 def test_start_is_idempotent_for_resume(tmp_path: Path) -> None:

@@ -48,7 +48,7 @@ def download_pretrained(variant: YoloxVariant) -> Path:
             "downloading official YOLOX-%s checkpoint: %s", variant.name, variant.checkpoint_url
         )
         torch.hub.download_url_to_file(variant.checkpoint_url, str(destination))
-    digest = _sha256_of(destination)
+    digest = sha256_of(destination)
     manifest = _read_manifest()
     recorded = manifest.get(variant.name)
     if recorded is None:
@@ -88,7 +88,7 @@ def load_into(model: Any, checkpoint_path: Path, num_classes: int) -> list[str]:
     return skipped
 
 
-def _sha256_of(path: Path) -> str:
+def sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
