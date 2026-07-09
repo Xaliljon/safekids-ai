@@ -36,7 +36,8 @@ def test_covers_the_mandated_sprint19_workflow(notebook: dict) -> None:
         "GUARDIAN_DATASET_ROOT",  # datasets are external assets, never hardcoded
         "pip install",  # install dependencies
         "guardian-fall-detection-v1",  # the real published dataset
-        "guardian_ai.train train --config ai/training/configs/model-v1.yaml",  # exact spec config
+        "guardian_ai.train train",  # training (spec config referenced below)
+        "ai/training/configs/model-v1.yaml",  # the exact Sprint 20 spec config
         "guardian_ai.train evaluate",  # evaluation
         "guardian_ai.train error-analysis",  # error analysis
         "guardian_ai.train qualitative",  # qualitative report
@@ -81,6 +82,19 @@ def test_installs_via_uv_not_plain_pip(notebook: dict) -> None:
     assert "uv sync" in code
     assert "pip install -e" not in code
     assert "pip install -q -e" not in code
+
+
+def test_train_cell_is_disconnect_resilient(notebook: dict) -> None:
+    """Sprint 20.1: the run lives on Drive and re-running Run All resumes it,
+    so a Colab disconnect before 30 epochs needs no manual resume command."""
+    code = "\n".join(
+        "".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code"
+    )
+    assert "--auto-resume" in code
+    assert "--output-dir" in code
+    assert "/runs" in code  # run directory placed under the Drive output dir
+    # no manual `resume` subcommand anywhere — Run All is sufficient
+    assert "guardian_ai.train resume" not in code
 
 
 def test_forces_headless_matplotlib_backend(notebook: dict) -> None:

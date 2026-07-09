@@ -149,7 +149,7 @@ writes from Colab" rule.
 
 | Failure | Recovery |
 |---|---|
-| interrupted training (Ctrl-C, crash, Colab disconnect) | `resume --run <dir>` — loses at most one epoch |
+| interrupted training (Ctrl-C, crash, Colab disconnect) | every epoch atomically flushes `last.pt` (weights + optimizer + scheduler + AMP scaler + RNG state + epoch), `history.json`, `metrics.json`, `experiment.json`, `training.log`; `train --auto-resume` (or `resume --run <dir>`) continues from the next epoch — loses at most the epoch in progress (Sprint 20.1) |
 | corrupt/tampered ONNX | sha256 re-check at compat + promotion time rejects it |
 | diverging export | parity check rejects at export time; no manifest written |
 | wrong config key | load fails with the key name; nothing runs |
@@ -277,6 +277,36 @@ clone; the Colab notebook now uses it instead of plain pip (`.venv`
 lands at the workspace root, which the notebook prepends to `PATH` so
 every later cell's `!python`/`!pip` transparently uses it). Full
 walkthrough: [docs/COLAB_SETUP.md](../docs/COLAB_SETUP.md#why-uv-not-pip-install--e-ai).
+
+## Sprint 20.1: resume robustness (Colab disconnects)
+
+Colab frequently kills the runtime before a 30-epoch run completes. The
+engine already checkpointed every epoch and could `resume`, but three
+gaps meant a disconnect could still lose or corrupt progress, and
+recovery needed a manual command. Sprint 20.1 closes them — additive
+only, no protocol/boundary/workflow change:
+
+- **Complete checkpoints.** `last.pt`/`best.pt` now also carry the AMP
+  `GradScaler` state (hoisted out of `_train_epoch` so it is created once
+  and persists) and the full RNG state (python/numpy/torch/cuda), so a
+  resumed run continues the exact optimization *and* random stream, not
+  just the weights.
+- **Atomic writes.** Every per-epoch artifact — checkpoints,
+  `history.json`, the new `metrics.json`, `experiment.json` — is written
+  to a sibling `.tmp` then `os.replace`d into place, so a disconnect
+  mid-write can never truncate `last.pt` (this matters most when the run
+  directory is a Google Drive FUSE mount).
+- **Per-epoch flush + log.** `metrics.json` (per-epoch train loss + val
+  metric + best + planned/completed epochs) is flushed every epoch, and a
+  `training.log` file handler tees the run's logs to disk per record.
+  With the run directory pointed at Drive (`train --output-dir`), all of
+  this survives the runtime dying.
+- **Auto-resume.** `train --auto-resume` finds the newest *unfinished*
+  run for the config under the output dir and continues it from the next
+  epoch (a completed run is left untouched, no run yet ⇒ fresh). The
+  Colab notebook uses `--auto-resume --output-dir <Drive>`, so recovery
+  is just **Run All again** — no manual `resume` command. See
+  [docs/COLAB_SETUP.md](../docs/COLAB_SETUP.md#resuming-after-a-disconnect-sprint-201).
 
 ## Testing
 

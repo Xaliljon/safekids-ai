@@ -13,6 +13,8 @@ from guardian_ai.training.engine import (
     BEST_CHECKPOINT,
     HISTORY_FILE,
     LAST_CHECKPOINT,
+    METRICS_FILE,
+    TRAINING_LOG,
     Trainer,
 )
 from guardian_ai.training.errors import ExperimentError, TrainingConfigurationError
@@ -53,6 +55,44 @@ def test_smoke_training_produces_full_run(registry_root: Path, tmp_path: Path) -
         "images",
     }
     assert metrics["stopped_early"] is False
+
+
+def test_last_checkpoint_carries_rng_and_scaler_slots(registry_root: Path, tmp_path: Path) -> None:
+    import torch
+
+    config = make_training_config(registry_root, tmp_path / "runs", epochs=1)
+    experiment = Trainer(config).train()
+    checkpoint = torch.load(experiment.checkpoints_dir / LAST_CHECKPOINT, weights_only=False)
+    # Sprint 20.1: resume must restore the full training state, not just weights.
+    assert "rng" in checkpoint
+    assert {"python", "numpy", "torch"} <= set(checkpoint["rng"])
+    assert "scaler" in checkpoint  # None on CPU (no AMP), but the slot is present
+    assert "optimizer" in checkpoint
+    assert "scheduler" in checkpoint
+    assert checkpoint["epoch"] == 0
+
+
+def test_every_epoch_flushes_metrics_and_training_log(registry_root: Path, tmp_path: Path) -> None:
+    config = make_training_config(registry_root, tmp_path / "runs", epochs=2)
+    experiment = Trainer(config).train()
+
+    metrics = json.loads((experiment.run_dir / METRICS_FILE).read_text())
+    assert metrics["epochs_completed"] == 2
+    assert metrics["epochs_planned"] == 2
+    assert len(metrics["history"]) == 2
+    assert metrics["metric"] == config.early_stopping.metric
+    assert "final_val" in metrics  # written after the final evaluation
+
+    log_text = (experiment.run_dir / TRAINING_LOG).read_text()
+    assert "epoch 1/2" in log_text and "epoch 2/2" in log_text
+
+
+def test_no_temp_files_left_behind(registry_root: Path, tmp_path: Path) -> None:
+    config = make_training_config(registry_root, tmp_path / "runs", epochs=1)
+    experiment = Trainer(config).train()
+    # atomic writes rename a .tmp into place — none should survive a clean run
+    stray = list(experiment.run_dir.rglob("*.tmp"))
+    assert stray == []
 
 
 def test_training_is_reproducible(registry_root: Path, tmp_path: Path) -> None:

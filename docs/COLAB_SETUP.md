@@ -81,8 +81,8 @@ Validate workspace: /content/datasets/registry must exist, then every
         │            file's checksum is re-verified — a missing or
         │            corrupt extraction aborts here, not mid-training
         ▼
-Train -> Evaluate -> Error Analysis -> Qualitative -> Export
-        -> Benchmark -> COCO Comparison -> Candidate
+Train (run dir on Drive, --auto-resume) -> Evaluate -> Error Analysis
+        -> Qualitative -> Export -> Benchmark -> COCO Comparison -> Candidate
         │
         ▼
 Copy artifacts back to MyDrive/guardian-ai-models/model-v1/
@@ -93,9 +93,32 @@ message on failure — under Colab's Run All, an uncaught exception stops
 execution at that cell rather than limping forward with a half-built
 workspace and failing confusingly three cells later.
 
-If Colab disconnects mid-run, reconnect and re-run the mount/extract/install
-cells (idempotent — extraction always overwrites), then
-`guardian_ai.train resume --run <dir>` picks up from the last checkpoint.
+## Resuming after a disconnect (Sprint 20.1)
+
+Colab routinely drops the runtime before a 30-epoch run finishes. The
+notebook is built so recovery is simply **Run All again — no manual
+resume command, no lost work.**
+
+Two things make that safe:
+
+- The train cell passes **`--output-dir {DRIVE_OUT}/runs`**, so the run
+  directory lives on Google Drive, not on ephemeral `/content`. Every
+  epoch atomically flushes (temp file + rename, so a mid-write disconnect
+  never truncates anything):
+  - `checkpoints/last.pt` — model, optimizer, scheduler, **AMP scaler**,
+    **RNG state** (python/numpy/torch/cuda) and the epoch number,
+  - `checkpoints/best.pt` — whenever the tracked metric improves,
+  - `history.json`, `metrics.json`, `experiment.json`, `training.log`.
+- The train cell passes **`--auto-resume`**, which finds the newest
+  unfinished run for this config under the output dir and continues it
+  from `epoch + 1`, restoring optimizer, scheduler, AMP scaler, RNG state
+  and the early-stopping counters. A run that already reached the end is
+  detected and left untouched; if no run exists yet, a fresh one starts.
+
+So the recovery procedure is: reconnect → **Runtime → Run All**. The
+mount/extract/install/dataset cells are idempotent, and training picks up
+where it left off. (The lower-level `guardian_ai.train resume --run <dir>`
+command still exists for manual use, but the notebook never needs it.)
 
 ## Why `uv`, not `pip install -e ai`
 

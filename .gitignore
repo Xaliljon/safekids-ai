@@ -43,6 +43,10 @@ datasets/**
 *.pt
 *.pth
 
+# --- Colab packaging outputs (scripts/package-*.sh; assets, never source) ---
+/guardian-ai.zip
+/guardian-dataset-v1.zip
+
 # --- OS / IDE ---
 .DS_Store
 .idea/

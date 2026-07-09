@@ -12,6 +12,7 @@ so nothing here has hidden state: what the CLI reads is what is on disk.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import sys
@@ -39,7 +40,7 @@ from guardian_ai.training.compare import (
     save_comparison,
 )
 from guardian_ai.training.config import TrainingConfig, config_from_dict, load_config
-from guardian_ai.training.engine import Trainer
+from guardian_ai.training.engine import LAST_CHECKPOINT, Trainer
 from guardian_ai.training.errors import TrainingError
 from guardian_ai.training.experiment import Experiment
 from guardian_ai.training.promote import promote
@@ -69,9 +70,60 @@ def _print(payload: dict[str, Any]) -> None:
 # ------------------------------------------------------------------ commands
 
 
+def _find_latest_run(output_dir: Path, name: str) -> Path | None:
+    """Newest run directory for this experiment name, or None. Experiment
+    ids are ``<utc>-<name>-<uuid>``, so a lexicographic sort by directory
+    name is chronological."""
+    if not output_dir.is_dir():
+        return None
+    candidates = [
+        entry
+        for entry in output_dir.iterdir()
+        if entry.is_dir() and f"-{name}-" in entry.name and (entry / "experiment.json").is_file()
+    ]
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda entry: entry.name)[-1]
+
+
 def cmd_train(arguments: argparse.Namespace) -> int:
     config = load_config(Path(arguments.config))
-    experiment = Trainer(config).train()
+    if arguments.output_dir:
+        config = dataclasses.replace(config, output_dir=Path(arguments.output_dir))
+    trainer = Trainer(config)
+
+    if arguments.auto_resume:
+        existing = _find_latest_run(config.output_dir, config.name)
+        if existing is not None:
+            prior = Experiment.load(existing)
+            if prior.record.get("status") == "completed":
+                _print(
+                    {
+                        "experiment_id": prior.experiment_id,
+                        "run_dir": str(existing),
+                        "status": "completed",
+                        "epochs_completed": prior.record["epochs_completed"],
+                        "note": "auto-resume: run already complete — nothing to do",
+                    }
+                )
+                return 0
+            if (prior.checkpoints_dir / LAST_CHECKPOINT).is_file():
+                logger.info("auto-resume: continuing unfinished run %s", existing)
+                experiment = trainer.resume(existing)
+                _print(
+                    {
+                        "experiment_id": experiment.experiment_id,
+                        "run_dir": str(experiment.run_dir),
+                        "status": experiment.record["status"],
+                        "epochs_completed": experiment.record["epochs_completed"],
+                        "metrics": experiment.record["metrics"],
+                        "note": "auto-resume: continued from the last checkpoint",
+                    }
+                )
+                return 0
+            # A run dir exists but never checkpointed an epoch — start fresh.
+
+    experiment = trainer.train()
     _print(
         {
             "experiment_id": experiment.experiment_id,
@@ -374,6 +426,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     train = commands.add_parser("train", help="train from a YAML config")
     train.add_argument("--config", required=True, help="path to training YAML")
+    train.add_argument(
+        "--auto-resume",
+        action="store_true",
+        dest="auto_resume",
+        help="continue the newest unfinished run for this config instead of "
+        "starting a new one (a completed run is left untouched) — lets a "
+        "disconnected Colab just Run All again with no manual resume command",
+    )
+    train.add_argument(
+        "--output-dir",
+        default=None,
+        dest="output_dir",
+        help="override the config's output_dir (e.g. a Google Drive path on "
+        "Colab so every epoch's checkpoint and metrics survive a disconnect)",
+    )
     train.set_defaults(handler=cmd_train)
 
     resume = commands.add_parser("resume", help="continue an interrupted run")
