@@ -5,10 +5,18 @@ from dataset_fixtures import make_manifest, make_record
 from guardian_ai.datasets.privacy import check_privacy
 
 
+def resolves(_reference: str) -> bool:
+    """Stands in for a real ethics-review store (ADR-0005 §3). Tests that
+    assert a *clean* dataset must supply one: without a resolver the
+    checker refuses minors' data on principle, which is its own test."""
+    return True
+
+
 def test_clean_dataset_passes() -> None:
     report = check_privacy(
         make_manifest(),
         {"train": [make_record(attributes={"scene": "classroom"})]},
+        resolves,
     )
     assert report.ok
 
@@ -26,7 +34,7 @@ def test_minors_without_ethics_review_is_a_violation() -> None:
 
 def test_no_minors_needs_no_review_reference() -> None:
     manifest = make_manifest(contains_minors=False, review_reference="")
-    assert check_privacy(manifest, {"train": [make_record()]}).ok
+    assert check_privacy(manifest, {"train": [make_record()]}, resolves).ok
 
 
 def test_identity_attribute_keys_are_violations() -> None:

@@ -13,7 +13,7 @@ responsible AI lifecycle).
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -60,19 +60,31 @@ class PrivacyReport:
         return not self.violations
 
 
+ReviewResolver = Callable[[str], bool]
+"""Answers whether an ethics-review reference points at a real document.
+
+ADR-0005 §3: the reference is an artifact, not a field. A registry with no
+resolver cannot answer the question, and so cannot publish material
+depicting minors at all — which is the intended default."""
+
+
 def check_privacy(
-    manifest: DatasetManifest, splits: Mapping[str, Sequence[SampleRecord]]
+    manifest: DatasetManifest,
+    splits: Mapping[str, Sequence[SampleRecord]],
+    review_resolver: ReviewResolver | None = None,
 ) -> PrivacyReport:
     """Check a dataset's manifest and every record for privacy violations."""
     violations: list[PrivacyViolation] = []
-    violations.extend(_check_manifest(manifest))
+    violations.extend(_check_manifest(manifest, review_resolver))
     for records in splits.values():
         for record in records:
             violations.extend(_check_record(record))
     return PrivacyReport(violations=tuple(violations))
 
 
-def _check_manifest(manifest: DatasetManifest) -> list[PrivacyViolation]:
+def _check_manifest(
+    manifest: DatasetManifest, review_resolver: ReviewResolver | None
+) -> list[PrivacyViolation]:
     violations: list[PrivacyViolation] = []
     if not manifest.provenance.consent_reference.strip():
         violations.append(
@@ -81,11 +93,46 @@ def _check_manifest(manifest: DatasetManifest) -> list[PrivacyViolation]:
                 "consent is never published (docs/04, dataset ethics)"
             )
         )
-    if manifest.privacy.contains_minors and not manifest.privacy.review_reference.strip():
-        violations.append(
+    if manifest.privacy.contains_minors:
+        violations.extend(_check_minors(manifest, review_resolver))
+    return violations
+
+
+def _check_minors(
+    manifest: DatasetManifest, review_resolver: ReviewResolver | None
+) -> list[PrivacyViolation]:
+    """The floor for material depicting children (ADR-0005 §§3, 7)."""
+    reference = manifest.privacy.review_reference.strip()
+    if not reference:
+        return [
             PrivacyViolation(
                 "dataset contains minors but declares no ethics review_reference — "
                 "children's data requires documented review before publication"
+            )
+        ]
+    violations: list[PrivacyViolation] = []
+    if review_resolver is None:
+        violations.append(
+            PrivacyViolation(
+                f"ethics review '{reference}' cannot be verified: this registry has "
+                f"no review resolver, and a reference nobody can follow is a field "
+                f"rather than a review (ADR-0005 §3)"
+            )
+        )
+    elif not review_resolver(reference):
+        violations.append(
+            PrivacyViolation(
+                f"ethics review '{reference}' resolves to nothing — the reference "
+                f"must point at a written review recording who reviewed, the lawful "
+                f"basis, the retention period and the withdrawal procedure "
+                f"(ADR-0005 §3)"
+            )
+        )
+    if not manifest.privacy.retention_until.strip():
+        violations.append(
+            PrivacyViolation(
+                "dataset contains minors but states no retention_until — material "
+                "with no end date is material nobody ever deletes (ADR-0005 §7)"
             )
         )
     return violations

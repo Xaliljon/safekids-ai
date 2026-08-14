@@ -48,6 +48,7 @@ def make_manifest(
     consent_reference: str = "consent/agreement-2026-001",
     contains_minors: bool = True,
     review_reference: str = "ethics/review-2026-007",
+    retention_until: str = "2028-07-05",
 ) -> DatasetManifest:
     return DatasetManifest(
         name=name,
@@ -64,6 +65,7 @@ def make_manifest(
             contains_minors=contains_minors,
             anonymized=True,
             review_reference=review_reference,
+            retention_until=retention_until,
         ),
         splits=splits
         or {

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from guardian_ai.datasets.errors import DatasetValidationError
+from guardian_ai.datasets.licensing import DatasetUsage
 from guardian_ai.datasets.versioning import DatasetVersion
 
 DATASET_MANIFEST_NAME = "dataset.json"
@@ -44,6 +45,12 @@ class PrivacyDeclaration:
     review_reference: str = ""
     """Pointer to the ethics review record (mandatory when minors appear)."""
 
+    retention_until: str = ""
+    """ISO date after which this material is deleted and the version
+    tombstoned as EXPIRED. Mandatory when minors appear: dataset material
+    runs on a different clock from evidence on a box (ADR-0005 §7), and a
+    dataset of children with no end date is one nobody ever deletes."""
+
 
 @dataclass(frozen=True, slots=True)
 class SplitFile:
@@ -72,6 +79,11 @@ class DatasetManifest:
     privacy: PrivacyDeclaration
     splits: Mapping[str, SplitFile]
     license: str = "Proprietary-GuardianAI"
+    usage: DatasetUsage = DatasetUsage.TRAINING
+    """What this version may be used for. Research-licensed corpora publish
+    as EVALUATION_ONLY and are refused by the promotion gate as a training
+    source (ADR-0005 §5)."""
+
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -140,11 +152,25 @@ def _parse(raw: dict[str, Any]) -> DatasetManifest:
             contains_minors=bool(privacy_raw["contains_minors"]),
             anonymized=bool(privacy_raw["anonymized"]),
             review_reference=str(privacy_raw.get("review_reference", "")),
+            retention_until=str(privacy_raw.get("retention_until", "")),
         ),
         splits=splits,
         license=str(raw.get("license", "Proprietary-GuardianAI")),
+        usage=_parse_usage(raw.get("usage")),
         metadata=metadata,
     )
+
+
+def _parse_usage(raw: Any) -> DatasetUsage:
+    """Absent usage means TRAINING — the value every manifest written before
+    ADR-0005 implicitly carried, so old manifests keep loading unchanged."""
+    if raw is None:
+        return DatasetUsage.TRAINING
+    try:
+        return DatasetUsage(str(raw))
+    except ValueError as exc:
+        allowed = sorted(option.value for option in DatasetUsage)
+        raise DatasetValidationError(f"'usage' must be one of {allowed}: {exc}") from exc
 
 
 def _to_dict(manifest: DatasetManifest) -> dict[str, Any]:
@@ -163,11 +189,13 @@ def _to_dict(manifest: DatasetManifest) -> dict[str, Any]:
             "contains_minors": manifest.privacy.contains_minors,
             "anonymized": manifest.privacy.anonymized,
             "review_reference": manifest.privacy.review_reference,
+            "retention_until": manifest.privacy.retention_until,
         },
         "splits": {
             name: {"file": split.file_name, "sha256": split.sha256, "samples": split.samples}
             for name, split in manifest.splits.items()
         },
         "license": manifest.license,
+        "usage": manifest.usage.value,
         "metadata": dict(manifest.metadata),
     }

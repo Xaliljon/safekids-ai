@@ -21,7 +21,10 @@ def root(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def registry(root: Path) -> FileSystemDatasetRegistry:
-    return FileSystemDatasetRegistry(root)
+    # The shared fixture manifest declares minors, so this registry needs a
+    # review resolver to publish at all (ADR-0005 §3). The refusal without
+    # one is covered in test_datasets_governance.py.
+    return FileSystemDatasetRegistry(root, review_resolver=lambda _: True)
 
 
 def publish_ok(registry: FileSystemDatasetRegistry, tmp_path: Path, version: str = "1.0.0"):  # noqa: ANN201

@@ -39,6 +39,14 @@ from guardian_ai.datasets.errors import (
     DatasetRegistryError,
     DatasetValidationError,
 )
+from guardian_ai.datasets.licensing import check_dataset_license
+from guardian_ai.datasets.lifecycle import (
+    TOMBSTONE_NAME,
+    DatasetLifecycle,
+    Tombstone,
+    load_tombstone,
+    save_tombstone,
+)
 from guardian_ai.datasets.manifest import (
     DATASET_MANIFEST_NAME,
     DatasetManifest,
@@ -46,7 +54,7 @@ from guardian_ai.datasets.manifest import (
     load_manifest,
     save_manifest,
 )
-from guardian_ai.datasets.privacy import check_privacy
+from guardian_ai.datasets.privacy import ReviewResolver, check_privacy
 from guardian_ai.datasets.quality import validate_quality
 from guardian_ai.datasets.taxonomy import LabelTaxonomy
 from guardian_ai.datasets.versioning import DatasetVersion
@@ -64,6 +72,9 @@ class RegisteredDataset:
 
     manifest: DatasetManifest
     root: Path
+    tombstone: Tombstone | None = None
+    """Populated only by ``get_for_audit``. ``get`` never returns a
+    tombstoned version, so anything holding one from ``get`` sees None."""
 
     def load_split(self, split_name: str) -> list[SampleRecord]:
         split = self.manifest.splits.get(split_name)
@@ -78,8 +89,9 @@ class RegisteredDataset:
 class FileSystemDatasetRegistry:
     """Dataset registry over a local directory tree."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, review_resolver: ReviewResolver | None = None) -> None:
         self._root = root
+        self._review_resolver = review_resolver
         self._clean_stale_staging()
 
     # -------------------------------------------------------------- reads
@@ -98,10 +110,88 @@ class FileSystemDatasetRegistry:
         return manifests
 
     def get(self, name: str, version: str | None = None) -> RegisteredDataset:
-        """Resolve a dataset (latest version when omitted) and verify checksums."""
+        """Resolve a usable dataset version and verify its checksums.
+
+        Refuses a tombstoned version (ADR-0005 §4): a withdrawn dataset stays
+        readable for audit through ``get_for_audit`` and is unavailable to
+        every path that trains on it. When no version is named, tombstoned
+        ones are skipped rather than refused — withdrawal publishes a
+        replacement, and that replacement is what "latest" should mean.
+        """
         version_dir = self._resolve_version_dir(name, version)
+        tombstone = load_tombstone(version_dir)
+        if tombstone is not None:
+            raise DatasetRegistryError(
+                f"dataset {name} v{version_dir.name} is tombstoned as "
+                f"{tombstone.lifecycle.value} and cannot be loaded: "
+                f"{tombstone.reason} (recorded {tombstone.recorded_utc} by "
+                f"{tombstone.recorded_by})"
+            )
         manifest = self._load_verified_manifest(version_dir, name)
         return RegisteredDataset(manifest=manifest, root=version_dir)
+
+    def get_for_audit(self, name: str, version: str) -> RegisteredDataset:
+        """Load any version, tombstoned or not, for inspection.
+
+        The counterpart to ``get``'s refusal. Withdrawal revokes the licence
+        to train, not the record of what was trained: a director asking what
+        happened to their child's footage is answered from here.
+        """
+        version_dir = self._resolve_version_dir(name, version)
+        manifest = self._load_verified_manifest(version_dir, name)
+        return RegisteredDataset(
+            manifest=manifest, root=version_dir, tombstone=load_tombstone(version_dir)
+        )
+
+    def tombstone_of(self, name: str, version: str) -> Tombstone | None:
+        """The tombstone on a version, or None when it is still usable."""
+        return load_tombstone(self._resolve_version_dir(name, version))
+
+    # ---------------------------------------------------------- withdrawal
+
+    def withdraw(
+        self,
+        name: str,
+        version: str,
+        *,
+        reason: str,
+        recorded_by: str,
+        recorded_utc: str,
+        superseded_by: str | None = None,
+    ) -> Tombstone:
+        """Revoke a version's licence to train, on consent withdrawal.
+
+        The version's files are left exactly as published. Deleting them
+        would destroy the manifest that proves what a deployed model learned
+        from, and withdrawal is not served by making the record unauditable —
+        the media itself lives in DVC storage and is deleted there.
+        """
+        return self._tombstone(
+            name,
+            version,
+            Tombstone(
+                lifecycle=DatasetLifecycle.WITHDRAWN,
+                reason=reason,
+                recorded_utc=recorded_utc,
+                recorded_by=recorded_by,
+                superseded_by=superseded_by,
+            ),
+        )
+
+    def expire(
+        self, name: str, version: str, *, reason: str, recorded_by: str, recorded_utc: str
+    ) -> Tombstone:
+        """Retire a version whose retention period elapsed (ADR-0005 §7)."""
+        return self._tombstone(
+            name,
+            version,
+            Tombstone(
+                lifecycle=DatasetLifecycle.EXPIRED,
+                reason=reason,
+                recorded_utc=recorded_utc,
+                recorded_by=recorded_by,
+            ),
+        )
 
     # ------------------------------------------------------------ publish
 
@@ -145,6 +235,22 @@ class FileSystemDatasetRegistry:
 
     # ---------------------------------------------------------- internals
 
+    def _tombstone(self, name: str, version: str, tombstone: Tombstone) -> Tombstone:
+        version_dir = self._resolve_version_dir(name, version)
+        try:
+            save_tombstone(version_dir, tombstone)
+        except DatasetValidationError as exc:
+            raise DatasetRegistryError(str(exc)) from exc
+        logger.warning(
+            "dataset registry: %s v%s tombstoned as %s by %s — %s",
+            name,
+            version,
+            tombstone.lifecycle.value,
+            tombstone.recorded_by,
+            tombstone.reason,
+        )
+        return tombstone
+
     def _validate_bundle(
         self, bundle_dir: Path, taxonomy: LabelTaxonomy
     ) -> tuple[DatasetManifest, dict[str, list[SampleRecord]]]:
@@ -152,6 +258,10 @@ class FileSystemDatasetRegistry:
             manifest = load_manifest(bundle_dir / DATASET_MANIFEST_NAME)
         except DatasetValidationError as exc:
             raise DatasetPublishError(f"bundle '{bundle_dir}': {exc}") from exc
+        try:
+            check_dataset_license(manifest.license, manifest.usage, manifest.name)
+        except DatasetValidationError as exc:
+            raise DatasetPublishError(str(exc)) from exc
         if (manifest.taxonomy_name, manifest.taxonomy_version) != (taxonomy.name, taxonomy.version):
             raise DatasetPublishError(
                 f"dataset {manifest.name}: bound to taxonomy {manifest.taxonomy_name} "
@@ -173,7 +283,7 @@ class FileSystemDatasetRegistry:
             logger.warning(
                 "dataset %s: %s", manifest.name, _issue_text(warning.message, warning.sample)
             )
-        privacy = check_privacy(manifest, splits)
+        privacy = check_privacy(manifest, splits, self._review_resolver)
         if not privacy.ok:
             details = "; ".join(_issue_text(v.message, v.sample) for v in privacy.violations)
             raise DatasetPublishError(f"dataset {manifest.name}: privacy gate failed: {details}")
@@ -203,6 +313,7 @@ class FileSystemDatasetRegistry:
             privacy=manifest.privacy,
             splits=finalized_splits,
             license=manifest.license,
+            usage=manifest.usage,
             metadata=manifest.metadata,
         )
 
@@ -244,7 +355,13 @@ class FileSystemDatasetRegistry:
         ]
         if not versions:
             raise DatasetRegistryError(f"dataset '{name}' has no versions")
-        return max(versions, key=lambda entry: DatasetVersion.parse(entry.name))
+        usable = [entry for entry in versions if not (entry / TOMBSTONE_NAME).is_file()]
+        if not usable:
+            raise DatasetRegistryError(
+                f"dataset '{name}' has {len(versions)} version(s) and every one is "
+                f"tombstoned — use get_for_audit() to inspect them"
+            )
+        return max(usable, key=lambda entry: DatasetVersion.parse(entry.name))
 
     def _clean_stale_staging(self) -> None:
         staging_root = self._root / STAGING_DIR_NAME

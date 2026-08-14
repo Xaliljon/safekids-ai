@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from guardian_ai.datasets.registry import FileSystemDatasetRegistry
 from guardian_ai.evaluation.detection import EVALUATION_FILE, save_evaluation
 from guardian_ai.evaluation.error_analysis import (
     ERROR_ANALYSIS_FILE,
@@ -283,15 +284,23 @@ def cmd_compare(arguments: argparse.Namespace) -> int:
 
 def cmd_promote(arguments: argparse.Namespace) -> int:
     experiment, _ = _open_run(Path(arguments.run))
+    # The registry checked is the one this run trained from, read back out
+    # of the run's own config — not a root the promoter picks at approval
+    # time. ADR-0005's refusals are worth nothing if the approver can point
+    # the gate at a registry where the withdrawal never landed.
+    registry_root = _config_for_run(experiment).dataset.registry_root
     destination = promote(
         experiment,
         zoo_root=Path(arguments.zoo),
         approved_by=arguments.approved_by,
+        datasets=FileSystemDatasetRegistry(registry_root),
     )
+    promotion = experiment.record["promotion"]
     _print(
         {
             "promoted_to": str(destination),
-            "approved_by": experiment.record["promotion"]["approved_by"],
+            "approved_by": promotion["approved_by"],
+            "dataset_verified": promotion["dataset_verified"],
             "note": "activation on a box remains a manual guardianctl step",
         }
     )

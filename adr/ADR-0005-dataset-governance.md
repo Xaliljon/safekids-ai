@@ -101,12 +101,35 @@ kindergartens.
    more than a parent's ability to change their mind about their child.
 
 5. **Third-party datasets must permit commercial use, and the registry
-   enforces it.** The model zoo already refuses AGPL structurally
-   (ADR-0003/0009); the dataset registry gains the symmetric gate and
-   refuses non-commercial licences (CC BY-NC*, research-only, and academic
-   terms that forbid production use). A licence field that cannot be
-   mapped to a known permissive licence blocks publication. This is why
-   OmniFall cannot be used despite fitting the problem well.
+   enforces it — but licence and *use* are separate questions.** The model
+   zoo already refuses AGPL structurally (ADR-0003/0009); the dataset
+   registry gains the symmetric gate. A licence field that cannot be mapped
+   to a known term blocks publication: silence is not permission, and a
+   field defaulting to `Proprietary-GuardianAI` is not a declaration.
+
+   Implementing this found something the first draft had wrong. Guardian's
+   own importers describe Le2i as "research use" and UR Fall as "free for
+   research use". A gate that simply refused non-commercial licences would
+   have blocked the dataset already trained on and the two corpora queued
+   to fix its scene leakage — while leaving the actual risk unaddressed,
+   because nothing in the manifest ever stated those terms.
+
+   So a published version declares what it may be used for:
+
+   - **`training`** — full use, including a model that reaches the zoo.
+     Requires a licence on the commercial allowlist.
+   - **`evaluation-only`** — loadable and scoreable, refused by the
+     promotion gate as a training source. This is how research-licensed
+     corpora stay useful without becoming a liability.
+
+   The distinction is real rather than a loophole. Training a shipped
+   detector on research-licensed footage is the commercial use those terms
+   withhold; *measuring* a detector against a held-out research corpus is
+   a laboratory instrument. The refusal therefore lives at promotion, not
+   at load: that is the moment a licence question becomes a shipping
+   question. OmniFall (CC BY-NC-SA) remains unusable for training and is
+   now usable for measurement — which is more than the first draft allowed
+   and less than convenience would like.
 
 6. **What is never collected, at any consent level:** audio (blocked on a
    PRD that does not exist), face embeddings or any identity feature,
@@ -127,13 +150,30 @@ kindergartens.
 - **Collection cannot start on engineering's schedule.** An executed
   agreement and a written ethics review are prerequisites, and both involve
   people outside this repository. That is the intended cost.
-- **The withdrawal path has real engineering weight**: a version diff, a
-  tombstone status the registry honours on load, an experiment-level flag,
-  and a promotion block. None of it exists yet; all of it is cheap compared
-  to discovering it is missing when a parent asks.
+- **The withdrawal path has real engineering weight**: a tombstone the
+  registry honours on load, an audit read that survives it, and a promotion
+  block. This is now built (`datasets/lifecycle.py`, `datasets/licensing.py`,
+  and the refusals in `registry.get` and `training/promote`), and it cost
+  far less than discovering it was missing when a parent asked.
+- **Promotion now requires a dataset registry.** `promote()` refuses
+  without one rather than skipping the check, and the registry it consults
+  is read from the run's own config — an approver cannot point the gate at
+  a registry where the withdrawal never landed. Runs that train outside the
+  registry (the COCO baseline) are not refused, but their promotion record
+  carries `dataset_verified: false` permanently.
+- **A registry with no ethics-review resolver cannot publish material
+  depicting minors at all.** That is the default, deliberately: wiring a
+  resolver is an explicit act by someone who knows where the reviews live.
 - **Some public data becomes unusable that would have been convenient.**
-  OmniFall is the concrete example. The licence gate will say so at publish
-  time rather than after a model is trained on it.
+  OmniFall for training is the concrete example, and the gate says so at
+  publish time rather than after a model is trained on it.
+- **This makes a live problem visible rather than creating one.** Guardian
+  Candidate v1 was trained on Le2i, whose terms our own importer records as
+  research use. Under this ADR that dataset is `evaluation-only` and the
+  candidate cannot be promoted on it. The candidate is already REJECTED on
+  other grounds, so the cost today is zero — but the finding is real and
+  needs counsel, not a code change: **whether Le2i's terms permit training
+  a shipped detector is question 5 below.**
 - **Le2i stays legitimate** — adults, published for research under its own
   terms — but this ADR makes explicit that it can never answer the
   kindergarten question, only keep the pipeline honest until real data
@@ -179,3 +219,8 @@ the operating jurisdiction:
    trained on the material — and does that change if the model is deployed?
 4. Does a kindergarten act as controller, processor, or joint controller
    with Guardian, and which of them owes the withdrawal mechanism?
+5. Do Le2i's and UR Fall's research terms permit training a detector that
+   ships in a commercial product? Until answered, both are published
+   `evaluation-only` and no model trained on them can be promoted. This one
+   blocks *shipping*, not collection, and it is the only question here that
+   is already binding on work in progress.
