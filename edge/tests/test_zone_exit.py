@@ -237,9 +237,9 @@ class TestSchedule:
             timezone_name="Asia/Tashkent",
         )
         # 12:57 local — three minutes before the window opens.
-        assert (
-            run(steady(OUTSIDE_X, 20), zones=(self.NAP_ONLY,), local_zone=self.AT_1257) == []
-        ), "precondition: a trusted clock honours the declared edge"
+        assert run(steady(OUTSIDE_X, 20), zones=(self.NAP_ONLY,), local_zone=self.AT_1257) == [], (
+            "precondition: a trusted clock honours the declared edge"
+        )
         assert (
             run(
                 steady(OUTSIDE_X, 20),

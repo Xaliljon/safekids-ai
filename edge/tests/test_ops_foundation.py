@@ -90,6 +90,7 @@ class TestInstallCheck:
             "memory",
             "network",
             "home_writable",
+            "timezone",
         }
         report_path = tmp_path / "reports" / "install-report.json"
         report = installation_report(results, report_path, "2026-07-06T00:00:00+00:00")

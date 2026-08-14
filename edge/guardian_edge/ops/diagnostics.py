@@ -23,7 +23,9 @@ from guardian_edge.domain.detection import BoundingBox, Detection, DetectionResu
 from guardian_edge.domain.errors import GuardianEdgeError
 from guardian_edge.domain.frame import Frame
 from guardian_edge.domain.incident import SafetyIncident
+from guardian_edge.infrastructure.zones.config import load_zones
 from guardian_edge.ops.camera_probe import probe_camera
+from guardian_edge.ops.clock import ClockTrust
 from guardian_edge.ops.paths import GuardianHome
 
 _PROBE_FRAMES = 15
@@ -85,6 +87,7 @@ def run_diagnostics(
     checks.append(_check_tracking())
     checks.append(_check_notifications(home))
     checks.append(_check_device_api(device_api_port))
+    checks.append(_check_clock(home))
 
     return DiagnosticReport(
         created_utc=created_utc,
@@ -218,6 +221,45 @@ def _check_notifications(home: GuardianHome) -> DiagnosticCheck:
         problem=None if delivered else "notification delivery failing",
         recommendation=None if delivered else "check disk space and logs/notifications.log",
     )
+
+
+def _check_clock(home: GuardianHome) -> DiagnosticCheck:
+    """Is local wall-clock time trustworthy? (ADR-0018 §8)
+
+    Only zone schedules depend on this, and they fail safe — an untrusted
+    clock enforces every zone regardless of hours. So this reports a real
+    problem without ever being the reason a child goes unwatched, and the
+    box is only *degraded* when a zone actually declares hours.
+    """
+    status = ClockTrust(home.data_dir).status()
+    scheduled = _scheduled_zone_count(home)
+    if status.trusted:
+        return DiagnosticCheck(name="clock", ok=True, detail=status.reason)
+    if scheduled == 0:
+        return DiagnosticCheck(
+            name="clock",
+            ok=True,
+            detail=f"{status.reason} — no zone declares hours, so nothing depends on it",
+        )
+    return DiagnosticCheck(
+        name="clock",
+        ok=False,
+        detail=f"{status.reason}; {scheduled} scheduled zone(s) are enforced around the clock",
+        problem="the box cannot trust its local time",
+        recommendation=(
+            "set the timezone and let the box reach an NTP server, then re-run "
+            "diagnose; until then scheduled safe areas alert outside their hours"
+        ),
+    )
+
+
+def _scheduled_zone_count(home: GuardianHome) -> int:
+    if not home.zones_file.is_file():
+        return 0
+    try:
+        return sum(1 for zone in load_zones(home.zones_file) if zone.active_windows)
+    except GuardianEdgeError:
+        return 0  # the zone check itself reports a malformed file
 
 
 def _check_device_api(port: int) -> DiagnosticCheck:

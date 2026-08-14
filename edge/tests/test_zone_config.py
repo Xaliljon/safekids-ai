@@ -190,6 +190,6 @@ class TestShippedExample:
         by_id = {zone.zone_id: zone for zone in zones}
         assert by_id["classroom-1-play-area"].active_windows == (), "documents an always-on zone"
         assert len(by_id["classroom-1-nap-area"].active_windows) == 1, "documents a schedule"
-        assert (
-            len(by_id["playground-fenced-area"].active_windows) == 2
-        ), "documents that a zone may have several windows in a day"
+        assert len(by_id["playground-fenced-area"].active_windows) == 2, (
+            "documents that a zone may have several windows in a day"
+        )

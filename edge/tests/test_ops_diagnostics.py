@@ -34,6 +34,7 @@ class TestRunDiagnostics:
             "tracking",
             "notifications",
             "device_api",
+            "clock",
         }
 
     def test_missing_cameras_yields_wizard_recommendation(self, home: GuardianHome) -> None:
@@ -90,3 +91,62 @@ class TestRunDiagnostics:
         assert saved["created_utc"] == CREATED
         assert saved["ok"] is False
         assert any(c["name"] == "tracking" and c["ok"] for c in saved["checks"])
+
+
+class TestClockCheck:
+    """A clock fault only matters if some zone declares hours — and even
+    then it fails safe, so this reports it without ever being the reason a
+    child goes unwatched (ADR-0018 §8)."""
+
+    SCHEDULED_ZONE = """
+zones:
+  - id: nap
+    camera_id: cam-1
+    polygon: [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9]]
+    active_windows:
+      - days: daily
+        from: "13:00"
+        to: "15:00"
+"""
+
+    ALWAYS_ON_ZONE = """
+zones:
+  - id: play
+    camera_id: cam-1
+    polygon: [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9]]
+"""
+
+    @pytest.fixture()
+    def untrusted(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("guardian_edge.ops.clock.local_timezone_name", lambda: None)
+
+    def test_an_untrusted_clock_with_scheduled_zones_is_a_problem(
+        self, home: GuardianHome, untrusted: None
+    ) -> None:
+        home.zones_file.write_text(self.SCHEDULED_ZONE, encoding="utf-8")
+
+        clock = check(run_diagnostics(home, created_utc=CREATED, probe_cameras=False), "clock")
+
+        assert not clock.ok
+        assert "cannot trust its local time" in (clock.problem or "")
+        assert "1 scheduled zone(s)" in clock.detail
+        assert clock.recommendation
+
+    def test_an_untrusted_clock_with_no_scheduled_zones_is_not_a_problem(
+        self, home: GuardianHome, untrusted: None
+    ) -> None:
+        home.zones_file.write_text(self.ALWAYS_ON_ZONE, encoding="utf-8")
+
+        clock = check(run_diagnostics(home, created_utc=CREATED, probe_cameras=False), "clock")
+
+        assert clock.ok, "nothing depends on the hour, so nothing is wrong"
+        assert "nothing depends on it" in clock.detail
+
+    def test_a_malformed_zone_file_does_not_break_the_clock_check(
+        self, home: GuardianHome, untrusted: None
+    ) -> None:
+        home.zones_file.write_text("zones: [{id: broken}]", encoding="utf-8")
+
+        clock = check(run_diagnostics(home, created_utc=CREATED, probe_cameras=False), "clock")
+
+        assert clock.ok, "the zone config has its own error path; this one must not crash"

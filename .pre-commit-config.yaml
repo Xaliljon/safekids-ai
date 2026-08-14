@@ -14,8 +14,11 @@ repos:
         args: ["--maxkb=1024"]
       - id: detect-private-key
 
+  # Must match the ruff the workspace resolves (pyproject: ruff>=0.8) — CI
+  # runs `uv run ruff format --check`, and a hook on a different version
+  # reformats exactly what CI then rejects.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: ["--fix"]

@@ -58,7 +58,7 @@ class TestCategoricalFaults:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("TZ", raising=False)
-        monkeypatch.setattr("guardian_edge.ops.clock._local_timezone_name", lambda: None)
+        monkeypatch.setattr("guardian_edge.ops.clock.local_timezone_name", lambda: None)
 
         status = make_trust(tmp_path).status(NOW)
 
@@ -89,9 +89,9 @@ class TestStalenessIsNotAFault:
 
         expected = elapsed.total_seconds() * CRYSTAL_DRIFT_PPM / 1e6
         assert status.error_bound_seconds == pytest.approx(expected)
-        assert status.error_bound_minutes == pytest.approx(
-            5.04, abs=0.05
-        ), "the ADR's worked example: 70 days offline widens each edge by ~5 minutes"
+        assert status.error_bound_minutes == pytest.approx(5.04, abs=0.05), (
+            "the ADR's worked example: 70 days offline widens each edge by ~5 minutes"
+        )
 
 
 class TestHighWaterMark:

@@ -88,10 +88,14 @@ hours. Staleness instead carries an error bound that *widens* every window
 edge — 70 days offline enforces a 13:00 zone from 12:55, a year from
 12:34. DST gaps and repeats resolve the same way: active.
 
-`/health` reports `clock` and `zones`; a box whose scheduled zones are
-being enforced regardless of hours says so instead of looking healthy.
+Reported in three places: `/health` carries `clock` and `zones`;
+`guardianctl diagnose` fails the `clock` check *only when some zone
+declares hours* (a fault nothing depends on is not a fault); and
+`guardianctl check` warns at install time if no timezone is set — a
+non-blocking warning, because at install time nobody knows yet whether
+this box will get scheduled zones.
 
-## Verified (73 new tests)
+## Verified (76 new tests)
 
 Geometry including concave (L-shaped) rooms and boundary points;
 overnight and multi-window schedules; margin widening that may never

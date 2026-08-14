@@ -18,6 +18,7 @@ from typing import Any
 import psutil
 
 import guardian_edge
+from guardian_edge.ops.clock import local_timezone_name
 
 MIN_PYTHON = (3, 10)
 MIN_FREE_DISK_GB = 5.0
@@ -41,6 +42,7 @@ def validate_environment(home: Path) -> list[CheckResult]:
         _memory(),
         _network(),
         _writable(home),
+        _timezone(),
     ]
 
 
@@ -118,6 +120,27 @@ def _network() -> CheckResult:
         "network",
         bool(addresses),
         f"LAN addresses: {addresses}" if addresses else "no non-loopback IPv4 address",
+    )
+
+
+def _timezone() -> CheckResult:
+    """A configured local timezone (ADR-0018 §8).
+
+    Not required: at install time nobody knows yet whether this box will
+    get safe-area zones with hours, and blocking an install over a feature
+    that may never be used is the wrong trade. It is surfaced loudly
+    because the failure it prevents is quiet — a nap-room boundary
+    enforced at the wrong hour, or (fail-safe) around the clock.
+    """
+    name = local_timezone_name()
+    if name:
+        return CheckResult("timezone", True, name, required=False)
+    return CheckResult(
+        "timezone",
+        False,
+        "no local timezone configured — scheduled safe areas will be enforced "
+        "around the clock until one is set (see ADR-0018)",
+        required=False,
     )
 
 

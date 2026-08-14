@@ -105,7 +105,7 @@ class ClockTrust:
     def status(self, now: datetime | None = None) -> ClockStatus:
         """Evaluate trust. Never raises: a failure here must not stop the box."""
         moment = now or datetime.now(tz=timezone.utc)
-        zone_name = _local_timezone_name()
+        zone_name = local_timezone_name()
         if zone_name is None:
             return ClockStatus(
                 trusted=False,
@@ -209,7 +209,7 @@ def _parse_utc(value: str) -> datetime:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _local_timezone_name() -> str | None:
+def local_timezone_name() -> str | None:
     """The box's configured local zone, or None when it has none.
 
     A box left at UTC by default is indistinguishable from a box genuinely
