@@ -57,6 +57,35 @@ evidenced the incident. A clip is traceable back through risk → tracking
   threads; the recorder queue decouples the Risk Engine completely.
 - Memory: ≈ 30 MB per camera at defaults (30 s, 10 fps, ~100 KB/frame).
 
+## Storage bounds (ADR-0019)
+
+Retention is age-based and every clip does expire — but age never bounded
+the disk. A box opening incidents faster than its shortest window (24 h for
+dismissed) accumulates without limit: **2602 records and 152 GB** were
+measured in a few hours against a looping test clip, with the sweeper
+running correctly the entire time and nothing yet old enough to expire.
+
+The sweeper now runs a budget pass after the age pass, evicting until the
+evidence directory is inside `max_total_bytes` (20 GB default) and the
+filesystem is above `min_free_bytes` (10 GB — twice the installer's own
+refusal threshold, so the budget bites before the box endangers anything
+else). Sizes come from each record's clip metadata, so a sweep costs no
+directory walk.
+
+**Eviction order is by review state, not age.** Dismissed first, then
+confirmed, then pending review; CRITICAL last within each class; oldest
+first within that. Strict oldest-first is simpler and wrong — on a busy box
+the oldest records are the ones waiting longest for a human, which is
+exactly the evidence most likely to matter.
+
+Evicting evidence nobody has reviewed is logged at warning level, counted,
+and reported through `/health` as a **degraded** evidence subsystem. That
+state says the box is opening incidents faster than they can be reviewed;
+the fix is upstream in the risk policy, not a bigger disk.
+
+The metadata tombstone always survives: a director loses the footage, never
+the fact that an incident existed and what was decided about it.
+
 ## Failure & recovery
 
 | Failure | Behavior |
