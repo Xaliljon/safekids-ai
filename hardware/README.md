@@ -13,6 +13,6 @@ targets — NVIDIA Jetson (primary) and Intel N100 (secondary).
 
 ## Rules
 
-- Hardware is modular and replaceable (CLAUDE.md hardware principles); the `edge/` runtime declares which targets it supports, not the other way around.
+- Hardware is modular and replaceable (ENGINEERING.md hardware principles); the `edge/` runtime declares which targets it supports, not the other way around.
 - No application logic here. Software that runs on the box lives in `edge/`; OS image and provisioning live in `firmware/`.
 - Hardware failures must never corrupt user data (docs/03) — storage design decisions get documented here and reviewed against that rule.

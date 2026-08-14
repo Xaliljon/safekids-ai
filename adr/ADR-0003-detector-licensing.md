@@ -6,7 +6,7 @@
 
 ## Context
 
-CLAUDE.md names "YOLO" in the AI stack, but the ubiquitous Ultralytics
+ENGINEERING.md names "YOLO" in the AI stack, but the ubiquitous Ultralytics
 YOLO (v5/v8/v11) is **AGPL-3.0**: shipping it inside the proprietary
 Guardian Edge Box would obligate releasing our source, and buying out of
 that requires a per-seat commercial license. This risk was flagged in the
@@ -20,7 +20,7 @@ Sprint 8 integrates the first real detector, so the decision is now due.
    and released weights). Anchor-free YOLO-family architecture with
    competitive accuracy/latency, official ONNX exports, a simple published
    decode, and TensorRT support for the Jetson path later. It satisfies
-   the CLAUDE.md "YOLO" intent with a license we can ship.
+   the ENGINEERING.md "YOLO" intent with a license we can ship.
 
 2. **First artifact: `yolox_tiny.onnx`** from the official
    `0.1.1rc0` release (fixed 416×416 input, 80 COCO classes, ~20 MB,

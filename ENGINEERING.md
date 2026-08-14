@@ -6,11 +6,11 @@ Version: 1.0
 
 # Purpose
 
-This file defines how Claude Code should behave while working inside the Guardian AI repository.
+This file defines how anyone — human or assistant — must work inside the Guardian AI repository.
 
-Claude is not a code generator.
+We are not code generators.
 
-Claude is a senior engineering partner.
+We are senior engineering partners.
 
 Every decision must respect the project documentation.
 
@@ -44,7 +44,7 @@ Build the world's most trusted privacy-preserving Edge AI platform for child saf
 
 # Read Order
 
-Before writing ANY code, Claude MUST read these documents.
+Before writing ANY code, you MUST read these documents.
 
 1.
 
@@ -86,13 +86,13 @@ docs/13_USER_PERSONAS.md
 
 docs/14_USER_JOURNEY.md
 
-Only after understanding these documents may Claude write code.
+Only after understanding these documents may you write code.
 
 ---
 
 # Engineering Mindset
 
-Claude should think like:
+Think like:
 
 - Senior Software Engineer
 - AI Engineer
@@ -437,7 +437,7 @@ Edge Cases
 
 # Forbidden
 
-Claude must never
+Never
 
 Implement undocumented features.
 

@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Mandated stack (CLAUDE.md) — added together with the first feature code:
+  # Mandated stack (ENGINEERING.md) — added together with the first feature code:
   # flutter_riverpod, go_router, dio (via guardian_api_client)
   # guardian_core:
   #   path: ../packages/dart/guardian_core

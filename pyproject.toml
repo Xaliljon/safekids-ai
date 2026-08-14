@@ -66,7 +66,7 @@ select = [
     "I",   # isort
     "UP",  # pyupgrade
     "B",   # flake8-bugbear (hidden side effects, mutable defaults)
-    "SIM", # flake8-simplify (CLAUDE.md: "Could it be simpler?")
+    "SIM", # flake8-simplify (ENGINEERING.md: "Could it be simpler?")
     "N",   # pep8-naming
     "S",   # flake8-bandit (security by default)
     "T20", # no stray print statements — use logging

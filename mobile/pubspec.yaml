@@ -13,7 +13,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any  # pinned by flutter_localizations
-  # Mandated stack (CLAUDE.md): Riverpod (state/DI), GoRouter (navigation),
+  # Mandated stack (ENGINEERING.md): Riverpod (state/DI), GoRouter (navigation),
   # Dio (networking), Hive (local storage; see ADR-0015).
   flutter_riverpod: ^2.6.1
   go_router: ^14.6.2

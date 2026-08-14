@@ -12,7 +12,7 @@ running on the **Guardian Edge Box** (NVIDIA Jetson / Intel N100).
 
 | Directory | Purpose |
 |---|---|
-| [`docs/`](docs/) | Governing documents: charter, vision, values, engineering principles, AI ethics. **Read these first** (CLAUDE.md read order). |
+| [`docs/`](docs/) | Governing documents: charter, vision, values, engineering principles, AI ethics. **Read these first** (ENGINEERING.md read order). |
 | [`adr/`](adr/) | Architecture Decision Records. Start with [ADR-0001](adr/ADR-0001-monorepo-architecture.md). |
 | [`architecture/`](architecture/) | System diagrams (C4, data flow, alert pipeline). |
 | [`contracts/`](contracts/) | Single source of truth for all interfaces: OpenAPI, event schemas, model manifests. |

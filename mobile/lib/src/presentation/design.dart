@@ -3,7 +3,7 @@
 ///
 /// The comp is a warm-paper light interface with a single orange action
 /// colour and four severity palettes. Every value here comes from it; a
-/// screen that hardcodes a hex is a bug (CLAUDE.md: avoid magic numbers).
+/// screen that hardcodes a hex is a bug (ENGINEERING.md: avoid magic numbers).
 ///
 /// Two deliberate departures from the comp, both documented rather than
 /// silently improvised:

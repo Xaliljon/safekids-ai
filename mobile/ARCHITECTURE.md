@@ -1,7 +1,7 @@
 # SafeKids Mobile — Architecture
 
 - **Date:** 2026-07-06 (Sprint 15, Mobile UX 1.0; supersedes the Sprint 13 revision)
-- **Reflects:** ADR-0015 (device API & mobile), ADR-0016 (box health surface), CLAUDE.md Flutter mandates
+- **Reflects:** ADR-0015 (device API & mobile), ADR-0016 (box health surface), ENGINEERING.md Flutter mandates
 
 ## What this app is
 
@@ -23,7 +23,7 @@ Device API :8787/:8788 (auth'd)      Health surface :8790 (read-only)
         └────────── the Guardian Edge Box — the app's only peer ─────────┘
 ```
 
-## Layers (Clean Architecture, CLAUDE.md stack)
+## Layers (Clean Architecture, ENGINEERING.md stack)
 
 | Layer | Contents | Rules |
 |---|---|---|

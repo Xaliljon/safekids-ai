@@ -5,7 +5,7 @@ import 'package:hive/hive.dart';
 
 import '../application/notification_cache.dart';
 
-/// Hive-backed offline cache (CLAUDE.md local-storage mandate, ADR-0015).
+/// Hive-backed offline cache (ENGINEERING.md local-storage mandate, ADR-0015).
 ///
 /// Stores plain JSON strings — no code generation, no schema migration
 /// while the model is young. Boxes: notifications (id -> json), meta

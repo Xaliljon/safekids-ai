@@ -22,7 +22,7 @@ scratch means re-owning:
 - every future architecture refinement the original authors ship.
 
 None of that is Guardian-specific. Maintaining it is pure cost with no
-product differentiation — exactly the kind of complexity CLAUDE.md's
+product differentiation — exactly the kind of complexity ENGINEERING.md's
 engineering principles warn against ("avoid unnecessary complexity",
 "could it be simpler?").
 

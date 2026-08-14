@@ -18,7 +18,7 @@ quiet hours). Offline-first throughout. See
 [NOTIFICATION_FLOW.md](NOTIFICATION_FLOW.md); ADR-0015/0016. 86 tests
 incl. goldens.
 
-## Mandated stack (CLAUDE.md)
+## Mandated stack (ENGINEERING.md)
 
 Riverpod (state + DI) · GoRouter (navigation) · Dio + web_socket_channel
 (networking) · Hive (local storage; ADR-0015).

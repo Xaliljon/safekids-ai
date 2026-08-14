@@ -48,7 +48,7 @@ the box — no accounts.
    the incident lives). The connection loop reconnects forever with a
    cancellable backoff.
 
-6. **Flutter architecture per CLAUDE.md, no new patterns:** Riverpod
+6. **Flutter architecture per ENGINEERING.md, no new patterns:** Riverpod
    (state/DI), GoRouter (created once — navigation never resets on
    rebuilds), Dio (HTTP), web_socket_channel (WS), **Hive** for local
    storage (of the mandated Hive/Isar pair: pure Dart, no codegen, trivial
@@ -78,6 +78,6 @@ the box — no accounts.
 - **QR-code pairing:** deferred — better UX than typing a code, same
   trust model; arrives with the box's physical display design.
 - **Isar for the cache:** deferred — heavier native/codegen footprint for
-  a cache of JSON maps; Hive satisfies the CLAUDE.md mandate today.
+  a cache of JSON maps; Hive satisfies the ENGINEERING.md mandate today.
 - **App talks to engines directly:** rejected — the API boundary is what
   lets engines evolve behind one versioned protocol.

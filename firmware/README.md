@@ -8,7 +8,7 @@ runtime container.
 
 - OS image build (JetPack-based for Jetson; minimal Linux for N100)
 - First-boot provisioning & device registration flow
-- Disk encryption setup (storage must be encrypted — CLAUDE.md)
+- Disk encryption setup (storage must be encrypted — ENGINEERING.md)
 - OTA update client: **signed** bundles, health-check, automatic rollback
 
 ## Rules
