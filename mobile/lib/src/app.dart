@@ -191,6 +191,15 @@ ThemeData _theme(Brightness brightness) {
         borderSide: BorderSide(color: sk.accent),
       ),
     ),
+    // A progress track must never inherit its colour. Material defaults the
+    // linear track to a surface container, which this scheme paints white —
+    // white track on a white card, so a 47% AI signal drew exactly like a
+    // 100% one. Confidence has to be visible to be reviewed (docs/04).
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: sk.accent,
+      linearTrackColor: sk.track,
+      circularTrackColor: sk.track,
+    ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: sk.card,
       surfaceTintColor: Colors.transparent,
