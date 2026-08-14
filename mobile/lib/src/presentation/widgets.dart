@@ -24,8 +24,10 @@ class SectionHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           SkSpace.screenGutter, SkSpace.sectionTop, SkSpace.screenGutter, 8),
+      // The label and its action share one line, as in the comp. A default
+      // TextButton is taller than the label and would push itself onto a
+      // line of its own, which is what this row is sized against.
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Text(
@@ -33,7 +35,11 @@ class SectionHeader extends StatelessWidget {
               style: SkType.sectionLabel.copyWith(color: sk.textMuted),
             ),
           ),
-          if (trailing != null) trailing!,
+          if (trailing != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 20),
+              child: trailing!,
+            ),
         ],
       ),
     );

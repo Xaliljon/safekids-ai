@@ -163,13 +163,21 @@ ThemeData _theme(Brightness brightness) {
       style: TextButton.styleFrom(
         foregroundColor: sk.accent,
         textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+        // The comp's "View all" is text on the section line, not a button
+        // sitting above it: no padding, no minimum tap box of its own.
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: sk.fill,
       hintStyle: TextStyle(fontSize: 13.5, color: sk.textFaint),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      // Tight vertical padding puts a floating label on top of whatever
+      // field sits above — the pairing form stacks four of them.
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(SkRadius.control),
         borderSide: BorderSide(color: sk.border),

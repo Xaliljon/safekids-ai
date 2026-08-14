@@ -120,18 +120,21 @@ class _PairingWizardScreenState extends ConsumerState<PairingWizardScreen> {
                 controller: _host,
                 decoration: InputDecoration(labelText: l10n.pairHostLabel),
               ),
+              const SizedBox(height: 12),
               TextField(
                 key: const Key('port-field'),
                 controller: _port,
                 decoration: InputDecoration(labelText: l10n.pairPortLabel),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 12),
               TextField(
                 key: const Key('code-field'),
                 controller: _code,
                 decoration: InputDecoration(labelText: l10n.pairCodeLabel),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 12),
               TextField(
                 key: const Key('name-field'),
                 controller: _name,
