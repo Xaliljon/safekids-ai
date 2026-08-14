@@ -122,6 +122,8 @@ void main() {
       expect(
           IncidentType.fromWire('potential_fall'), IncidentType.potentialFall);
       expect(IncidentType.potentialFall.wire, 'potential_fall');
+      expect(IncidentType.fromWire('zone_exit'), IncidentType.zoneExit);
+      expect(IncidentType.zoneExit.wire, 'zone_exit');
     });
 
     test('an unknown or missing type never becomes a known one', () {
@@ -129,8 +131,8 @@ void main() {
       // phones must not have its alerts thrown away — but it must not have
       // them mislabelled either.
       for (final wire in <Object?>[
-        'zone_exit',
-        'continuous_cry',
+        'continuous_cry', // the charter's third V1 event, not built yet
+        'nap_time',
         '',
         null,
         7

@@ -151,6 +151,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get safetyIncident => 'Инцидент безопасности';
 
   @override
+  String get zoneExit => 'Покинул безопасную зону';
+
+  @override
   String get severityLow => 'Низкая';
 
   @override

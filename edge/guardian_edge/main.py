@@ -22,8 +22,10 @@ import signal
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import tzinfo
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import guardian_edge
 from guardian_edge.api.pairing import PairingManager
@@ -32,6 +34,8 @@ from guardian_edge.application.camera_service import CameraService
 from guardian_edge.application.debugging.recorder import RiskDebugRecorder
 from guardian_edge.application.events.engine import EventEngine
 from guardian_edge.application.events.fall import PotentialFallDetector
+from guardian_edge.application.events.ports import CandidateDetector
+from guardian_edge.application.events.zone import ZoneExitDetector
 from guardian_edge.application.evidence.recorder import EvidenceRecorder
 from guardian_edge.application.evidence.retention import EvidenceRetentionService
 from guardian_edge.application.notifications.engine import NotificationEngine
@@ -41,6 +45,7 @@ from guardian_edge.domain.errors import GuardianEdgeError
 from guardian_edge.domain.frame import Frame
 from guardian_edge.domain.incident import SafetyIncident
 from guardian_edge.domain.track import TrackingResult
+from guardian_edge.domain.zone import Zone
 from guardian_edge.infrastructure.camera.config import load_cameras
 from guardian_edge.infrastructure.camera.rtsp_stream import OpenCvRtspStreamFactory
 from guardian_edge.infrastructure.evidence.crypto import EvidenceVault
@@ -50,6 +55,8 @@ from guardian_edge.infrastructure.inference.registry import FileSystemModelRegis
 from guardian_edge.infrastructure.notifications.local_push import LocalPushChannel
 from guardian_edge.infrastructure.tracking.bytetrack import ByteTracker
 from guardian_edge.infrastructure.vision.yolox import create_yolox_detector
+from guardian_edge.infrastructure.zones.config import load_zones
+from guardian_edge.ops.clock import ClockTrust
 from guardian_edge.ops.logging_setup import configure_logging
 from guardian_edge.ops.monitoring import HealthServer, PerformanceMonitor, SystemHealthCollector
 from guardian_edge.ops.paths import GuardianHome
@@ -156,8 +163,31 @@ def build_runtime(
         debug_recorder.on_incident(incident)
 
     risk_engine = RiskEngine(on_incident, observer=debug_recorder.on_risk_decision)
+
+    # Safe-area zones (ADR-0018). The clock is in the safety path now: a
+    # schedule may only ever suppress, so ClockTrust decides whether the
+    # zone detector may honour hours at all.
+    clock = ClockTrust(home.data_dir)
+    clock.record()
+    detectors: list[CandidateDetector] = [
+        PotentialFallDetector(observer=debug_recorder.on_evaluation)
+    ]
+    zones = load_zones(home.zones_file) if home.zones_file.is_file() else []
+    if zones:
+        detectors.append(
+            ZoneExitDetector(
+                zones,
+                clock.status,
+                observer=debug_recorder.on_evaluation,
+                local_zone=_configured_zone(clock),
+            )
+        )
+        logger.info("watching %d safe-area zone(s)", len(zones))
+    else:
+        logger.info("no safe-area zones configured — zone-exit detection is off")
+
     event_engine = EventEngine(
-        [PotentialFallDetector(observer=debug_recorder.on_evaluation)],
+        detectors,
         risk_engine,
         evaluation_observer=debug_recorder.on_evaluation,
     )
@@ -241,6 +271,8 @@ def build_runtime(
                 "buffer": frame_ring.stats(),
             },
             "events": lambda: {"status": "ok", **_event_status(event_engine)},
+            "clock": lambda: clock.status().to_dict(),
+            "zones": lambda: _zone_status(zones, clock),
             "debug": debug_recorder.counters,
         },
         warnings=watchdog.warnings,
@@ -318,6 +350,42 @@ def _event_status(event_engine: EventEngine) -> dict[str, Any]:
         "tracks_evaluated": stats.tracks_evaluated,
         "events_emitted": dict(stats.events_emitted),
         "detector_errors": stats.detector_errors,
+    }
+
+
+def _configured_zone(clock: ClockTrust) -> tzinfo | None:
+    """The box's declared timezone, resolved once at startup.
+
+    The clock reports which zone the operator configured; using it here is
+    what makes that provenance real rather than decorative. An unresolvable
+    name falls back to the system zone — and the clock has already reported
+    the box as untrusted, which enforces every schedule anyway.
+    """
+    name = clock.status().timezone_name
+    if not name:
+        return None
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("configured timezone '%s' is not in the tz database", name)
+        return None
+
+
+def _zone_status(zones: list[Zone], clock: ClockTrust) -> dict[str, Any]:
+    """Which safe areas exist, and whether their hours are being honoured."""
+    if not zones:
+        return {"status": "ok", "configured": 0}
+    status = clock.status()
+    scheduled = [zone for zone in zones if zone.active_windows]
+    return {
+        # An untrusted clock does not break zone detection — it enforces
+        # every schedule around the clock. That is a degraded box, not a
+        # healthy one, and only the operator can fix the cause.
+        "status": "ok" if status.trusted or not scheduled else "degraded",
+        "configured": len(zones),
+        "scheduled": len(scheduled),
+        "schedules_enforced_ignoring_hours": bool(scheduled) and not status.trusted,
+        "cameras": sorted({zone.camera_id for zone in zones}),
     }
 
 

@@ -168,16 +168,19 @@ def _format_evaluation(evaluation: TrackEvaluation) -> str:
             f"peak_down={_num(motion.peak_downward_velocity)}/s "
             f"delta={_num(motion.movement_delta)}"
         )
-    signals = evaluation.signals
-    if signals.confidence is not None:
-        parts.append(
-            "signals "
-            f"velocity={_num(signals.velocity_score)} "
-            f"aspect_ratio={_num(signals.aspect_ratio_score)} "
-            f"ground_contact={_num(signals.ground_score)} "
-            f"stillness={_num(signals.stillness_score)} "
-            f"final_confidence={_num(signals.confidence)}"
+    # Each detector carries its own signal shape (fall velocity/aspect vs
+    # zone dwell/distance), so render whatever it reported rather than a
+    # fixed field list — and use the same names timeline.json uses, so the
+    # log and the replay speak one vocabulary.
+    signals = evaluation.signals.to_dict()
+    confidence = signals.pop("confidence", None)
+    if confidence is not None:
+        rendered = " ".join(
+            f"{name}={_num(value) if isinstance(value, int | float) else value}"
+            for name, value in signals.items()
+            if value is not None
         )
+        parts.append(f"signals {rendered} final_confidence={_num(confidence)}")
     parts.append(
         f"CANDIDATE: {evaluation.reason}"
         if evaluation.outcome == "candidate"

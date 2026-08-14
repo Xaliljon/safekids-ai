@@ -1,6 +1,6 @@
 # ADR-0018: Safe-Area Zones and Zone-Exit Candidates
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-14
 - **Deciders:** Founder, Lead Software Architect
 

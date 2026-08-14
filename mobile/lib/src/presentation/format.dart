@@ -42,6 +42,7 @@ String severityLabel(AppLocalizations l10n, Severity severity) =>
 String incidentTypeLabel(AppLocalizations l10n, IncidentType type) =>
     switch (type) {
       IncidentType.potentialFall => l10n.potentialFall,
+      IncidentType.zoneExit => l10n.zoneExit,
       IncidentType.unknown => l10n.safetyIncident,
     };
 

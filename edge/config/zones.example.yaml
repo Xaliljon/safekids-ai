@@ -1,0 +1,73 @@
+# Guardian Edge Box — safe-area zone configuration example (ADR-0018).
+#
+# Copy to $GUARDIAN_HOME/config/zones.yaml. Normally you draw these with
+# `guardianctl zones` beside the camera; hand-editing is supported, and this
+# file documents the format.
+#
+# A zone is a SAFE area: the box raises a candidate when a child is outside
+# it, continuously, for long enough and far enough past the edge.
+#
+# READ THIS BEFORE DRAWING A POLYGON
+# ----------------------------------
+# The box never treats a child's disappearance as leaving. A child who walks
+# out through a door simply stops being tracked, and no candidate is raised.
+# The boundary must therefore sit INSIDE the frame with visible margin on
+# every route a child can take out of the room — so they are seen outside
+# the zone for a few seconds before they leave the picture.
+#
+# Coordinates are fractions of the frame, [0, 1], origin top-left — the same
+# space the whole vision pipeline uses, so they survive a resolution change.
+# They do NOT survive the camera being moved: if you re-aim or bump a
+# camera, redraw its zones.
+
+zones:
+  - id: classroom-1-play-area
+    camera_id: classroom-1-cam-1
+    name: "Classroom 1 — play area"
+    # Four corners of the mat, kept a good margin away from the doorway on
+    # the right so a child leaving is visible outside the zone first.
+    polygon:
+      - [0.08, 0.35]
+      - [0.72, 0.32]
+      - [0.75, 0.94]
+      - [0.05, 0.96]
+    calibrated_at: "2026-08-14T09:30:00+05:00"
+    calibrated_resolution: [1920, 1080]
+
+  - id: classroom-1-nap-area
+    camera_id: classroom-1-cam-1
+    name: "Classroom 1 — nap area"
+    polygon:
+      - [0.15, 0.40]
+      - [0.65, 0.38]
+      - [0.68, 0.90]
+      - [0.12, 0.92]
+    # Only enforced during nap time. Outside these hours the zone does not
+    # exist — the beds are not there. Times are local wall clock.
+    #
+    # If the box cannot trust its clock (never synchronized, time ran
+    # backwards, no timezone), EVERY zone is enforced regardless of hours:
+    # over-alerting is recoverable, an unwatched child is not. Check with
+    # `guardianctl diagnose`.
+    active_windows:
+      - days: weekdays        # or: [mon, tue, wed], daily, weekend
+        from: "13:00"
+        to: "15:00"
+    calibrated_at: "2026-08-14T09:32:00+05:00"
+    calibrated_resolution: [1920, 1080]
+
+  - id: playground-fenced-area
+    camera_id: playground-cam-1
+    name: "Playground — fenced area"
+    polygon:
+      - [0.10, 0.30]
+      - [0.90, 0.28]
+      - [0.95, 0.95]
+      - [0.05, 0.95]
+    active_windows:
+      - days: weekdays
+        from: "09:00"
+        to: "12:00"
+      - days: weekdays
+        from: "16:00"
+        to: "18:00"

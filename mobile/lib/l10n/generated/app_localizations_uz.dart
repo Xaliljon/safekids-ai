@@ -151,6 +151,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get safetyIncident => 'Xavfsizlik hodisasi';
 
   @override
+  String get zoneExit => 'Xavfsiz hududni tark etdi';
+
+  @override
   String get severityLow => 'Past';
 
   @override

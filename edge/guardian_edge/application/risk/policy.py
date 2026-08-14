@@ -77,9 +77,26 @@ class RiskPolicy:
 def default_policies() -> Mapping[CandidateEventType, RiskPolicy]:
     """SafeKids V1 defaults. Falls open on a single qualifying candidate:
     when a child might be hurt, the safe failure mode is a pending incident
-    a human glances at, not a suppressed signal."""
+    a human glances at, not a suppressed signal.
+
+    Zone exits are a slower kind of news — the detector already required a
+    sustained absence from the safe area (ADR-0018 §10), so nothing is
+    urgent by the time a candidate exists. They therefore open at the same
+    single-candidate threshold but carry a longer dismissal suppression: a
+    director who has just decided "that one is fine, a teacher is with her"
+    should not be asked again a minute later about the same child in the
+    same place."""
     return {
-        CandidateEventType.POTENTIAL_FALL: RiskPolicy(event_type=CandidateEventType.POTENTIAL_FALL)
+        CandidateEventType.POTENTIAL_FALL: RiskPolicy(event_type=CandidateEventType.POTENTIAL_FALL),
+        CandidateEventType.ZONE_EXIT: RiskPolicy(
+            event_type=CandidateEventType.ZONE_EXIT,
+            dismissal_suppression_seconds=300.0,
+            # A child out of the area is a supervision question, not an
+            # injury: severity rises with confidence more slowly than a fall.
+            medium_at=0.6,
+            high_at=0.85,
+            critical_at=0.95,
+        ),
     }
 
 

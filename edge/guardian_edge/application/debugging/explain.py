@@ -12,10 +12,22 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from math import hypot
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from guardian_edge.application.events.history import TrackObservation
+
+
+class SignalScores(Protocol):
+    """The weighted signals behind one detector's decision.
+
+    Each detector carries its own shape — a fall's velocity and aspect-ratio
+    scores mean nothing to a zone exit, and a single flat record would leave
+    most fields empty whichever detector wrote it. The recorder only needs
+    to serialize them.
+    """
+
+    def to_dict(self) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +83,7 @@ class TrackEvaluation:
     outcome: str  # "candidate" | "rejected"
     reason: str  # exact, human-readable; never empty
     motion: MotionAnalysis = field(default_factory=MotionAnalysis)
-    signals: SignalBreakdown = field(default_factory=SignalBreakdown)
+    signals: SignalScores = field(default_factory=SignalBreakdown)
 
     def to_dict(self) -> dict[str, Any]:
         return {

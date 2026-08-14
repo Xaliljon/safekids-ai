@@ -150,6 +150,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safetyIncident => 'Safety incident';
 
   @override
+  String get zoneExit => 'Left the safe area';
+
+  @override
   String get severityLow => 'Low';
 
   @override

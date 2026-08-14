@@ -35,6 +35,13 @@ class GuardianHome:
         return self.config_dir / "cameras.yaml"
 
     @property
+    def zones_file(self) -> Path:
+        """Safe-area zones (ADR-0018). Kept out of cameras.yaml: zones are
+        redrawn by an operator, and that editor must never open the file
+        holding credential references."""
+        return self.config_dir / "zones.yaml"
+
+    @property
     def models_dir(self) -> Path:
         return self.root / "models"
 

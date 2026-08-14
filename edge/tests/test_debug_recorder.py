@@ -66,7 +66,12 @@ class TestDebugLog:
         assert any("INCIDENT_OPENED" in message for message in messages)
         # signal breakdown appears exactly as the spec asks
         breakdown = next(message for message in messages if "final_confidence" in message)
-        for field in ("velocity=", "aspect_ratio=", "ground_contact=", "stillness="):
+        for field in (
+            "velocity_score=",
+            "aspect_ratio_score=",
+            "ground_score=",
+            "stillness_score=",
+        ):
             assert field in breakdown
         # identity chain in every track line
         track_line = next(message for message in messages if message.startswith("track #"))

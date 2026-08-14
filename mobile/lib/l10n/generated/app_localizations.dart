@@ -370,6 +370,12 @@ abstract class AppLocalizations {
   /// **'Safety incident'**
   String get safetyIncident;
 
+  /// No description provided for @zoneExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the safe area'**
+  String get zoneExit;
+
   /// No description provided for @severityLow.
   ///
   /// In en, this message translates to:

@@ -26,6 +26,9 @@ from guardian_edge.domain.track import Track
 @unique
 class CandidateEventType(Enum):
     POTENTIAL_FALL = "potential_fall"
+    ZONE_EXIT = "zone_exit"
+    """A child sustained outside a declared safe area (ADR-0018). Like every
+    candidate: a suspicion about geometry, never a claim about supervision."""
 
 
 @dataclass(frozen=True, slots=True)

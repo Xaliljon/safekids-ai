@@ -10,8 +10,8 @@ is **< 1 second**.
 
 | Layer | Path | Responsibility |
 |---|---|---|
-| Domain | `guardian_edge/domain/` | `SafetyEvent`, `Zone`, `Camera`, `RiskLevel` — pure Python, zero framework imports. |
-| Application | `guardian_edge/application/` | Use cases: `DetectFall`, `DetectZoneExit`, `DetectCry`, `RaiseAlert`. |
+| Domain | `guardian_edge/domain/` | `CandidateEvent`, `SafetyIncident`, `Zone`, `Camera`, `Severity` — pure Python, zero framework imports. |
+| Application | `guardian_edge/application/` | Use cases: `PotentialFallDetector`, `ZoneExitDetector`, risk/notification engines. Cry detection is not built (see status below). |
 | Infrastructure | `guardian_edge/infrastructure/camera/` | RTSP/ONVIF camera session management. |
 | | `guardian_edge/infrastructure/inference/` | Model runtime backends — ONNX Runtime (canonical) and TensorRT (Jetson) behind the `InferenceEngine` port. |
 | | `guardian_edge/infrastructure/vision/` | Task-level detectors (`DummyDetector` today) and the OpenCV overlay renderer. |
@@ -33,14 +33,20 @@ is **< 1 second**.
 | **Real detection model** (YOLOX-tiny, Apache-2.0; live RTSP demo, benchmarks) | ✅ Integrated — `make model-yolox && make demo-vision`; ADR-0003 |
 | **Multi-object tracking** (in-house ByteTrack, persistent ids, lifecycle) | ✅ Implemented — optional pipeline stage; ADR-0011 |
 | **Event engine** (track history → explainable PotentialFall candidates) | ✅ Foundation — see [architecture/event-engine.md](../architecture/event-engine.md), ADR-0012 |
+| **Safe-area zones** (zone-exit candidates, schedules, clock trust) | ✅ Implemented — see [architecture/safe-area-zones.md](../architecture/safe-area-zones.md), ADR-0018; draw zones in `config/zones.yaml` |
 | **Risk engine** (candidates → PENDING_REVIEW SafetyIncidents; human review API) | ✅ Implemented — see [architecture/risk-engine.md](../architecture/risk-engine.md), ADR-0013 |
 | **Notification engine** (incidents → local-first delivered notifications) | ✅ Implemented — see [architecture/notification-engine.md](../architecture/notification-engine.md), ADR-0014 |
 | **Device API** (pairing, WebSocket push, offline sync, review actions) | ✅ Implemented — `guardian_edge/api/`; ADR-0015; demo: `uv run python -m guardian_edge.tools.device_demo` |
 | **Evidence platform** (circular buffer → incident clips, original + AI overlay, AES-256, retention, audited Device API serving) | ✅ Implemented — see [architecture/evidence-platform.md](../architecture/evidence-platform.md), ADR-0017 |
 | **Operational readiness** (supervisor, `guardianctl`, installer, health `:8790`, diagnostics, watchdog, backup, structured logs) | ✅ Implemented — see [architecture/pilot-readiness.md](../architecture/pilot-readiness.md), ADR-0016; operator docs: [PILOT_GUIDE.md](../PILOT_GUIDE.md) |
 | TensorRT engine (Jetson) | Pending (bench hardware job) |
-| Audio (cry detection) | Pending (scope blocked on PRD) |
+| Audio (cry detection) | Pending — blocked on `docs/10_PRODUCT_DISCOVERY.md`, which does not exist yet; also needs a privacy ADR and a trackless-event port |
 | Storage / cloud sync | Pending |
+
+Safe-area zones: copy [`config/zones.example.yaml`](config/zones.example.yaml)
+to `$GUARDIAN_HOME/config/zones.yaml`. **Read the header before drawing a
+polygon** — the box never treats a child's disappearance as leaving, so the
+boundary must sit inside the frame with margin on every exit route.
 
 Camera configuration: copy [`config/cameras.example.yaml`](config/cameras.example.yaml)
 and register cameras explicitly; RTSP credentials come from environment

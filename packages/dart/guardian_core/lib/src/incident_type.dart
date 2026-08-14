@@ -17,17 +17,22 @@ library;
 enum IncidentType {
   potentialFall,
 
+  /// A child sustained outside a declared safe area (ADR-0018).
+  zoneExit,
+
   /// A type this app build does not know, or a payload that predates the
   /// field. The event is real; only its name is unavailable.
   unknown;
 
   static IncidentType fromWire(Object? value) => switch (value) {
         'potential_fall' => IncidentType.potentialFall,
+        'zone_exit' => IncidentType.zoneExit,
         _ => IncidentType.unknown,
       };
 
   String get wire => switch (this) {
         IncidentType.potentialFall => 'potential_fall',
+        IncidentType.zoneExit => 'zone_exit',
         IncidentType.unknown => 'unknown',
       };
 }
