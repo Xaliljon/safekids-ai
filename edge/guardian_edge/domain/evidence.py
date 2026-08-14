@@ -15,12 +15,14 @@ Design intent (ADR-0017):
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
+from guardian_edge.domain.errors import VisionConfigurationError
 from guardian_edge.domain.incident import IncidentStatus, Severity
 
 
@@ -144,6 +146,15 @@ class Evidence:
     error: str | None = None
     evidence_version: int = field(default=1)
 
+    @property
+    def stored_bytes(self) -> int:
+        """Bytes this record occupies, from its own clip metadata.
+
+        Read from the record rather than the filesystem so a retention
+        sweep costs no directory walk (ADR-0019).
+        """
+        return sum(clip.size_bytes for clip in self.clips)
+
     @staticmethod
     def new_id() -> UUID:
         return uuid4()
@@ -252,3 +263,59 @@ class EvidenceRetentionPolicy:
         return evidence.created_at + self.lifetime_for(
             evidence.incident_status, evidence.incident_severity
         )
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceStorageBudget:
+    """How much disk evidence may occupy at once (ADR-0019).
+
+    Age answers *when may this be deleted*. It does not answer *how much may
+    exist*, and a box that opens incidents faster than its shortest window
+    expires them fills the disk with nothing expired: 2602 records and
+    152 GB were measured that way, with the sweeper running correctly the
+    whole time.
+
+    This is the backstop, applied after the age pass. Defaults are a
+    starting point — the real numbers need a pilot's incident rate, which
+    does not exist yet.
+    """
+
+    max_total_bytes: int = 20 * 1024**3
+    """Ceiling on the evidence directory."""
+
+    min_free_bytes: int = 10 * 1024**3
+    """Floor on the filesystem — twice the installer's own 5 GB refusal
+    threshold, so the budget bites before the box endangers anything else."""
+
+    def __post_init__(self) -> None:
+        if self.max_total_bytes <= 0 or self.min_free_bytes < 0:
+            raise VisionConfigurationError("evidence budget must be positive")
+
+    def over_budget(self, used_bytes: int, free_bytes: int) -> bool:
+        return used_bytes > self.max_total_bytes or free_bytes < self.min_free_bytes
+
+    @staticmethod
+    def eviction_order(records: Iterable[Evidence]) -> list[Evidence]:
+        """Least-needed first.
+
+        Review state leads, not age. Evidence nobody has looked at is the
+        evidence most likely to be needed, so PENDING_REVIEW goes last —
+        evicting strictly oldest-first would delete exactly those, because
+        on a busy box the oldest records are the ones waiting longest for a
+        human. CRITICAL goes last within its class; a dismissed critical
+        still outranks a pending low.
+        """
+        return sorted(records, key=_eviction_key)
+
+
+def _eviction_key(evidence: Evidence) -> tuple[int, int, datetime]:
+    by_review = {
+        IncidentStatus.DISMISSED: 0,
+        IncidentStatus.CONFIRMED: 1,
+        IncidentStatus.PENDING_REVIEW: 2,
+    }
+    return (
+        by_review[evidence.incident_status],
+        1 if evidence.incident_severity is Severity.CRITICAL else 0,
+        evidence.created_at,
+    )

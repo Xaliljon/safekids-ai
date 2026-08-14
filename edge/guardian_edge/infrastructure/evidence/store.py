@@ -58,6 +58,11 @@ class FileSystemEvidenceStore:
         self._lock = threading.Lock()
         self._dir.mkdir(parents=True, exist_ok=True)
 
+    @property
+    def evidence_dir(self) -> Path:
+        """Where records live — the retention budget stats this for free space."""
+        return self._dir
+
     # ------------------------------------------------------------- writing
 
     def save_record(self, evidence: Evidence) -> None:

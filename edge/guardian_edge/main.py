@@ -266,8 +266,12 @@ def build_runtime(
             "tracking": lambda: {"status": "ok", "last_latency_ms": tracking_gauge.value()},
             "risk": lambda: _risk_status(risk_engine),
             "notifications": lambda: _notification_status(notification_engine),
+            # The retention stats carry the subsystem's status: evicting
+            # evidence nobody reviewed degrades it (ADR-0019), and that has
+            # to reach an operator rather than only the log.
             "evidence": lambda: {
                 **evidence_recorder.stats(),
+                **evidence_retention.stats(),
                 "buffer": frame_ring.stats(),
             },
             "events": lambda: {"status": "ok", **_event_status(event_engine)},
