@@ -1,0 +1,197 @@
+{
+  "sprint": "20.2",
+  "title": "Inference optimization and profiling",
+  "classification": "PARTIALLY_OPTIMIZED",
+  "promotion_result": "REJECT",
+  "promotion_reason": "mean latency still exceeds the baseline by more than the gate's 20% slack; the only configuration that passes destroys detection entirely",
+  "measurement_class": "development",
+  "is_edge_target": false,
+  "edge_note": "No Jetson or N100 was available. Every latency figure below is Apple M4 Max and must not be read as production Edge performance.",
+
+  "host": {
+    "platform": "macOS-26.3-arm64-arm-64bit-Mach-O",
+    "processor": "Apple M4 Max",
+    "cores": {"performance": 10, "efficiency": 4, "logical": 14},
+    "ram_gb": 36,
+    "python": "3.14.6",
+    "onnxruntime": "1.27.0",
+    "available_providers": ["CoreMLExecutionProvider", "AzureExecutionProvider", "CPUExecutionProvider"]
+  },
+
+  "artifacts": {
+    "candidate": {
+      "onnx_sha256": "5fe134798a5b9fb49718464000d378682902225a0125bdc5159069e38e25a7e0",
+      "checkpoint_sha256": "9de513de589ac98bb92d3bca53b5af7b9acfa9b0bacb831f7999d0f7afaee8f0",
+      "input_shape": [1, 3, 640, 640],
+      "output_shape": [1, 8400, 9],
+      "size_mb": 19.463
+    },
+    "baseline": {
+      "onnx_sha256": "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7",
+      "input_shape": [1, 3, 416, 416],
+      "output_shape": [1, 3549, 85],
+      "size_mb": 19.283,
+      "note": "stock COCO-pretrained yolox-tiny 0.1.1-rc0 installed in the model zoo"
+    }
+  },
+
+  "gate_original": {
+    "measured_on": "Colab CPU execution provider",
+    "candidate": {"latency_ms_mean": 169.991, "latency_ms_p95": 192.31, "memory_mb": 73.58},
+    "baseline": {"latency_ms_mean": 92.885, "latency_ms_p95": 109.96, "memory_mb": 0.0},
+    "ratio": 1.83,
+    "allowance_ms": 111.462
+  },
+
+  "baseline_reproduction": {
+    "method": "compare.benchmark_onnx unchanged (runs=30, warmup=5, seed=0, CPUExecutionProvider)",
+    "candidate_mean_ms_repeats": [45.4, 52.3, 62.1],
+    "candidate_relative_spread": 0.37,
+    "baseline_mean_ms_repeats": [30.4, 30.8, 23.4],
+    "ratio": 2.66,
+    "conclusion": "absolute figures differ from Colab because the CPU differs; the ratio reproduces the rejection. The ±37% spread makes the existing methodology unusable as an optimization target, which is why a steady-state profiler was added."
+  },
+
+  "cold_start_vs_steady_state": {
+    "method": "profiling.profile_inference, candidate 640, default threads, warmup=20, runs=200",
+    "first_call_ms": 42.25,
+    "first_ten": {"mean_ms": 56.45, "p95_ms": 79.94},
+    "steady_state": {"mean_ms": 59.76, "p50_ms": 56.96, "p95_ms": 92.06, "stdev_ms": 18.34, "relative_spread": 0.307},
+    "note": "the first call is faster than the steady mean, which is the opposite of a normal cold start and was the clue that thread oversubscription, not warmup, drove the variance"
+  },
+
+  "runtime_configurations": {
+    "method": "profiling.profile_inference, runs=100, CPUExecutionProvider unless stated",
+    "candidate_640_intra_op_sweep": [
+      {"intra_op_threads": null, "mean_ms": 53.70, "p50_ms": 51.47, "p95_ms": 85.50, "relative_spread": 0.326},
+      {"intra_op_threads": 1, "mean_ms": 46.47, "p50_ms": 46.04, "p95_ms": 49.64, "relative_spread": 0.033},
+      {"intra_op_threads": 2, "mean_ms": 35.88, "p50_ms": 35.37, "p95_ms": 40.72, "relative_spread": 0.067},
+      {"intra_op_threads": 4, "mean_ms": 40.43, "p50_ms": 40.99, "p95_ms": 53.52, "relative_spread": 0.176},
+      {"intra_op_threads": 6, "mean_ms": 48.91, "p50_ms": 47.99, "p95_ms": 74.27, "relative_spread": 0.303},
+      {"intra_op_threads": 8, "mean_ms": 55.71, "p50_ms": 54.71, "p95_ms": 81.10, "relative_spread": 0.290},
+      {"intra_op_threads": 10, "mean_ms": 66.28, "p50_ms": 63.08, "p95_ms": 94.37, "relative_spread": 0.275},
+      {"intra_op_threads": 12, "mean_ms": 70.67, "p50_ms": 69.45, "p95_ms": 105.65, "relative_spread": 0.290},
+      {"intra_op_threads": 14, "mean_ms": 89.07, "p50_ms": 79.87, "p95_ms": 135.98, "relative_spread": 0.423}
+    ],
+    "baseline_416_intra_op_sweep": [
+      {"intra_op_threads": null, "mean_ms": 25.41, "relative_spread": 0.229},
+      {"intra_op_threads": 1, "mean_ms": 22.34, "relative_spread": 0.043},
+      {"intra_op_threads": 2, "mean_ms": 18.83, "relative_spread": 0.092},
+      {"intra_op_threads": 4, "mean_ms": 20.87, "relative_spread": 0.235},
+      {"intra_op_threads": 6, "mean_ms": 21.95, "relative_spread": 0.248},
+      {"intra_op_threads": 8, "mean_ms": 30.09, "relative_spread": 0.301}
+    ],
+    "candidate_640_graph_optimization": [
+      {"level": "ORT_ENABLE_ALL", "intra_op_threads": 2, "mean_ms": 36.41, "relative_spread": 0.088},
+      {"level": "ORT_ENABLE_EXTENDED", "intra_op_threads": 2, "mean_ms": 36.79, "relative_spread": 0.057},
+      {"level": "ORT_ENABLE_BASIC", "intra_op_threads": 2, "mean_ms": 36.91, "relative_spread": 0.071},
+      {"level": "ORT_DISABLE_ALL", "intra_op_threads": 2, "mean_ms": 37.55, "relative_spread": 0.136}
+    ],
+    "candidate_640_inter_op": [
+      {"inter_op_threads": 1, "intra_op_threads": 2, "mean_ms": 36.87, "relative_spread": 0.121}
+    ],
+    "candidate_640_coreml": [
+      {"provider": "CoreMLExecutionProvider", "intra_op_threads": 2, "mean_ms": 10.59, "p95_ms": 12.47, "first_call_ms": 10},
+      {"provider": "CoreMLExecutionProvider", "intra_op_threads": null, "mean_ms": 10.23, "p95_ms": 12.39, "first_call_ms": 11}
+    ]
+  },
+
+  "pytorch_vs_onnx": {
+    "method": "identical fixed-seed 1x3x640x640 tensor, batch 1, 2 threads on both, warmup 20, runs 100",
+    "pytorch": {"mean_ms": 56.52, "p50_ms": 55.51, "p95_ms": 59.74, "fps": 17.7},
+    "onnxruntime": {"mean_ms": 33.45, "p50_ms": 33.34, "p95_ms": 35.34, "fps": 29.9},
+    "onnx_speedup": 1.69
+  },
+
+  "fp16": {
+    "evaluated": true,
+    "applied": false,
+    "reason": "onnxconverter-common is not in the workspace, and the CPU execution provider — the one the promotion gate benchmarks — does not accelerate FP16; it converts back to FP32 for compute. FP16 is the right lever for TensorRT on Jetson and must be measured there, not inferred from a Mac."
+  },
+
+  "resolution_study": {
+    "method": "same checkpoint re-exported at each size (torch/onnxruntime parity validated at 1e-4); latency runs=150 intra_op=2; accuracy over the full 3692-image test split",
+    "gate_allowance_ms": 22.14,
+    "baseline_416_mean_ms": 18.45,
+    "results": [
+      {
+        "input_size": 416, "size_mb": 19.324,
+        "latency_mean_ms": 18.41, "latency_p95_ms": 20.34, "ratio_to_baseline": 1.00, "latency_gate": "pass",
+        "precision": 0.0, "recall": 0.0, "f1": 0.0, "map50": 0.0, "map50_95": 0.0,
+        "false_positives": 3015, "false_negatives": 3692
+      },
+      {
+        "input_size": 512, "size_mb": 19.366,
+        "latency_mean_ms": 25.10, "latency_p95_ms": 27.04, "ratio_to_baseline": 1.36, "latency_gate": "fail",
+        "precision": 0.0256, "recall": 0.0249, "f1": 0.0252, "map50": 0.0002, "map50_95": 0.0,
+        "false_positives": 3505, "false_negatives": 3600
+      },
+      {
+        "input_size": 640, "size_mb": 19.463,
+        "latency_mean_ms": 35.51, "latency_p95_ms": 39.82, "ratio_to_baseline": 1.92, "latency_gate": "fail",
+        "precision": 0.9902, "recall": 0.9832, "f1": 0.9867, "map50": 0.2442, "map50_95": 0.1399,
+        "false_positives": 36, "false_negatives": 62
+      }
+    ],
+    "conclusion": "Lowering input resolution is not available. The weights were trained at 640 and the anchor-free head's scale priors travel with that; re-exporting the same weights at 416 does not retrain them and detection collapses to zero. 416 passes the latency gate exactly (1.00x) and detects nothing — the precise trap section 7 exists to prevent."
+  },
+
+  "harness_validation": {
+    "sprint_20_reported": {"precision": 0.9858, "recall": 0.9805, "f1": 0.9832, "map50": 0.2435, "map50_95": 0.1269, "false_positives": 52, "false_negatives": 72},
+    "reproduced_at_640": {"precision": 0.9902, "recall": 0.9832, "f1": 0.9867, "map50": 0.2442, "map50_95": 0.1399, "false_positives": 36, "false_negatives": 62},
+    "note": "close enough to confirm the evaluation path is sound. The small difference is expected: the checkpoint handed back is epoch 13 of a 30-epoch config, not necessarily the weights that produced the Sprint 20 report."
+  },
+
+  "defects_found": [
+    {
+      "id": "checkpoint-namespace",
+      "severity": "high",
+      "summary": "Guardian's own checkpoints never loaded. Training saves OfficialYoloxWrapper.state_dict() with a yolox_model. prefix; load_into() received the bare YOLOX module, so none of the 462 tensors matched (missing=388, unexpected=462) and load_state_dict(strict=False) reported it only to the log.",
+      "impact": "any model.checkpoint in a config loaded as noise and detected nothing; upstream COCO checkpoints are bare so the defect stayed invisible",
+      "unaffected": "train resume, which torch.loads last.pt directly",
+      "status": "fixed"
+    },
+    {
+      "id": "checkpoint-head-dropped",
+      "severity": "high",
+      "summary": "load_into() dropped the head whenever num_classes != 80 — a property of the model being built, not of the checkpoint — discarding the trained head of any Guardian checkpoint.",
+      "status": "fixed"
+    },
+    {
+      "id": "benchmark-unreproducible",
+      "severity": "medium",
+      "summary": "compare.benchmark_onnx (30 runs, 5 warmups, ORT default threads) spread ±37% across identical repeats, so no 20% improvement is detectable through it.",
+      "status": "worked around by a steady-state profiler; the gate's own benchmark is unchanged"
+    }
+  ],
+
+  "rejected_optimizations": [
+    {"optimization": "lower input resolution (416 / 512)", "reason": "accuracy collapses to 0.0 / 0.026 precision"},
+    {"optimization": "FP16", "reason": "not accelerated by the CPU execution provider the gate benchmarks"},
+    {"optimization": "graph optimization level changes", "reason": "all four levels fall inside measurement noise"},
+    {"optimization": "inter-op thread tuning", "reason": "no effect; the graph has no parallel branches to schedule"},
+    {"optimization": "CoreML execution provider", "reason": "3.5x faster but Apple-only; the Edge targets are Jetson and N100, where the equivalent levers are TensorRT and OpenVINO and must be measured there"}
+  ],
+
+  "accepted_optimization": {
+    "change": "intra_op_num_threads = 2 on the CPU execution provider",
+    "candidate_640": {"before_mean_ms": 53.70, "after_mean_ms": 35.88, "improvement": 0.33},
+    "baseline_416": {"before_mean_ms": 25.41, "after_mean_ms": 18.83, "improvement": 0.26},
+    "accuracy_impact": "none — a session option changes no numerics",
+    "reproducibility_impact": "relative spread falls from 0.326 to 0.067, which is what makes the benchmark usable at all",
+    "why_it_does_not_pass_the_gate": "the gate is a ratio and both models speed up, so 2.11x becomes 1.92x against a 1.20x allowance",
+    "applied_to_production": false,
+    "note": "measured on a 14-core heterogeneous Apple CPU. The optimal thread count is a property of the host, so this must be re-measured on the Edge target rather than hardcoded from here."
+  },
+
+  "not_measured": [
+    {
+      "section": "3",
+      "item": "full pipeline component breakdown (capture, preprocess, tensor copy, inference, postprocess, NMS, tracking)",
+      "reason": "StageTimer is built and tested for it, but the end-to-end pipeline run was not wired. The decisive part of section 3 was established regardless: the gate's number is model inference only, with no capture, preprocessing, NMS or tracking in it, so no work on those stages can move it."
+    },
+    {"section": "12", "item": "Jetson or N100 benchmark", "reason": "no Edge hardware available"}
+  ],
+
+  "recommendation": "Do not promote. The candidate cannot be made to fit this gate by optimization, and cannot be shrunk by resolution without destroying it. The gate currently compares a 640 candidate against a 416 baseline — 2.37x the compute by construction — so the comparison itself should go to architecture review before any further optimization work: either re-baseline at matched resolution, or move the latency budget onto real Edge hardware where an accelerated execution provider is the actual lever."
+}

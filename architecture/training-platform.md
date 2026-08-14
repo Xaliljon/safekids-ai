@@ -308,6 +308,43 @@ only, no protocol/boundary/workflow change:
   is just **Run All again** — no manual `resume` command. See
   [docs/COLAB_SETUP.md](../docs/COLAB_SETUP.md#resuming-after-a-disconnect-sprint-201).
 
+## Sprint 20.2: the candidate does not fit the gate, and cannot be made to
+
+The Sprint 20 candidate was rejected on latency alone. Sprint 20.2 profiled
+the inference path to find out where that latency lives; the full matrices
+are in
+[`reports/model-v1/inference-optimization-report.md`](../reports/model-v1/inference-optimization-report.md)
+and the methodology in
+[`inference-performance.md`](inference-performance.md).
+
+What it changes about this platform:
+
+- **`guardian_ai.training.profiling`** is the steady-state profiler the
+  promotion benchmark is not. `compare.benchmark_onnx` spreads ±37% across
+  identical repeats, so it can rank two models but cannot show a 20%
+  improvement. The gate's own benchmark is deliberately unchanged — a
+  comparator that shifts under a sprint is not a gate.
+- **`load_into` had two defects that made every Guardian checkpoint
+  unloadable.** It received the bare YOLOX module while training saves the
+  wrapper's state dict (`yolox_model.` prefix), so none of the 462 tensors
+  matched; and it dropped the head whenever `num_classes != 80`, discarding
+  exactly the weights that had been trained. Both loaded silently — the
+  model ran and detected nothing. Both now decide from the checkpoint rather
+  than from an assumption about it. `train resume` was unaffected: it
+  `torch.load`s `last.pt` directly.
+
+What it establishes about the candidate:
+
+- Runtime configuration is worth 33% (`intra_op_num_threads=2`) with no
+  accuracy cost, but the gate is a ratio and the baseline speeds up equally.
+- Resolution is not a lever. Re-exported at 416 the model passes the gate at
+  exactly 1.00× and detects nothing — precision 0.000 over 3692 images.
+- The gate compares a 640×640 candidate against a 416×416 baseline, which is
+  2.37× the compute before any optimization. That comparison, not the model,
+  is what needs an architecture decision.
+
+Verdict: PARTIALLY OPTIMIZED, promotion REJECT.
+
 ## Testing
 
 388 platform tests (`ai/tests/test_training_*`, `test_evaluation_*`,
