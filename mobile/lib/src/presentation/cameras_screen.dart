@@ -71,7 +71,7 @@ class _CameraCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final color = cameraStatusColor(camera.status);
+    final color = cameraStatusColor(context, camera.status);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ExpansionTile(

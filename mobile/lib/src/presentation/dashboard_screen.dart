@@ -88,7 +88,7 @@ class _SystemStatusCard extends StatelessWidget {
     final health = status.health;
     final metrics = status.metrics;
     final boxStatus = health?.status ?? BoxStatus.unknown;
-    final color = boxStatusColor(boxStatus, scheme);
+    final color = boxStatusColor(context, boxStatus);
     final age = status.snapshotAge();
     final host = metrics?.host ?? health?.host;
 
@@ -201,7 +201,8 @@ class _CamerasCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
                       children: [
-                        StatusDot(color: cameraStatusColor(camera.status)),
+                        StatusDot(
+                            color: cameraStatusColor(context, camera.status)),
                         const SizedBox(width: 8),
                         Expanded(child: Text(camera.cameraId)),
                         Text(
@@ -228,7 +229,7 @@ class _RecentIncidentTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final message = item.message;
-    final color = severityColor(message.severity);
+    final color = severityColor(context, message.severity);
     return PanelCard(
       onTap: () {
         ref

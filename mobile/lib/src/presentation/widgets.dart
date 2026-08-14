@@ -1,8 +1,17 @@
+/// Shared building blocks, drawn to the SafeKids Director design comp.
+///
+/// Every screen is assembled from these, so the comp is honoured in one
+/// place rather than re-derived per screen. Colours come from [SkColors] —
+/// nothing here holds a hex.
+library;
+
 import 'package:flutter/material.dart';
 
-import '../application/connection_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../application/connection_controller.dart';
+import 'design.dart';
 
+/// The comp's uppercase group label, optionally with a "View all" action.
 class SectionHeader extends StatelessWidget {
   const SectionHeader(this.title, {super.key, this.trailing});
 
@@ -11,17 +20,17 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sk = context.sk;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+          SkSpace.screenGutter, SkSpace.sectionTop, SkSpace.screenGutter, 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Text(
               title.toUpperCase(),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                    letterSpacing: 1.1,
-                  ),
+              style: SkType.sectionLabel.copyWith(color: sk.textMuted),
             ),
           ),
           if (trailing != null) trailing!,
@@ -47,8 +56,38 @@ class StatusDot extends StatelessWidget {
   }
 }
 
+/// The comp's pill: a soft tone behind short, loud, uppercase text.
+class TonePill extends StatelessWidget {
+  const TonePill(this.label,
+      {super.key, required this.tone, this.dense = false});
+
+  final String label;
+  final SkTone tone;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: dense ? 9 : 10, vertical: dense ? 3 : 4),
+      decoration: BoxDecoration(
+        color: tone.background,
+        borderRadius: BorderRadius.circular(SkRadius.pill),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: SkType.badge.copyWith(color: tone.foreground),
+      ),
+    );
+  }
+}
+
 /// A labeled percentage gauge (CPU, RAM, disk) — text + linear bar, no
 /// decorative dials; a director glances at this, they don't study it.
+///
+/// The comp draws every bar in the action colour. That reads as "this is a
+/// number", not "this is a problem", so a genuinely alarming value still
+/// escalates to the warning and danger tones.
 class MetricGauge extends StatelessWidget {
   const MetricGauge({
     super.key,
@@ -63,28 +102,27 @@ class MetricGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final sk = context.sk;
     final value = percent;
-    final color = value == null
-        ? scheme.outlineVariant
-        : value >= 90
-            ? scheme.error
-            : value >= 75
-                ? Colors.orange
-                : scheme.primary;
+    final color = switch (value) {
+      null => sk.borderStrong,
+      >= 90 => sk.danger,
+      >= 75 => sk.warning,
+      _ => sk.accent,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            Text(label, style: SkType.detail.copyWith(color: sk.textSecondary)),
             Text(
               value == null ? '—' : '${value.toStringAsFixed(0)}%',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: SkType.detail.copyWith(
+                fontWeight: FontWeight.w600,
+                color: sk.textPrimary,
+              ),
             ),
           ],
         ),
@@ -95,18 +133,15 @@ class MetricGauge extends StatelessWidget {
             value: value == null ? 0 : (value / 100).clamp(0.0, 1.0),
             minHeight: 6,
             color: color,
-            backgroundColor: scheme.surfaceContainerHighest,
+            backgroundColor: sk.track,
           ),
         ),
         if (detail != null)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: 3),
             child: Text(
               detail!,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.outline),
+              style: SkType.caption.copyWith(color: sk.textFaint),
             ),
           ),
       ],
@@ -114,6 +149,13 @@ class MetricGauge extends StatelessWidget {
   }
 }
 
+/// The comp's live-connection badge: a status dot and one word.
+///
+/// The comp pulses the dot. That is decoration — the state is already
+/// carried by the word and the tone — and a repeating animation means
+/// `pumpAndSettle` can never settle, which would cost every widget test in
+/// the suite and every one written after it. Not a trade worth making for
+/// a breathing dot.
 class ConnectionChip extends StatelessWidget {
   const ConnectionChip({super.key, required this.state});
 
@@ -121,20 +163,35 @@ class ConnectionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sk = context.sk;
     final l10n = AppLocalizations.of(context);
-    final (label, color) = switch (state) {
-      BoxConnectionState.connected => (l10n.connConnected, Colors.green),
-      BoxConnectionState.connecting => (l10n.connConnecting, Colors.orange),
-      BoxConnectionState.offline => (l10n.connOffline, Colors.red),
-      BoxConnectionState.unpaired => (l10n.connUnpaired, Colors.grey),
+    final (label, tone) = switch (state) {
+      BoxConnectionState.connected => (l10n.connConnected, sk.positiveTone),
+      BoxConnectionState.connecting => (l10n.connConnecting, sk.medium),
+      BoxConnectionState.offline => (l10n.connOffline, sk.critical),
+      BoxConnectionState.unpaired => (l10n.connUnpaired, sk.neutralTone),
     };
-    return Chip(
+    return Container(
       key: const Key('connection-chip'),
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      backgroundColor: color.withValues(alpha: 0.15),
-      side: BorderSide(color: color),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: tone.background,
+        borderRadius: BorderRadius.circular(SkRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StatusDot(color: tone.dot, size: 5),
+          const SizedBox(width: 5),
+          Text(
+            label.toUpperCase(),
+            style: SkType.badge.copyWith(
+              color: tone.foreground,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -146,15 +203,21 @@ class OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sk = context.sk;
     return Container(
       key: const Key('offline-banner'),
       width: double.infinity,
-      color: Colors.amber.shade200,
-      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.fromLTRB(
+          SkSpace.screenGutter, 0, SkSpace.screenGutter, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: sk.medium.background,
+        borderRadius: BorderRadius.circular(SkRadius.chip),
+      ),
       child: Text(
         text ?? AppLocalizations.of(context).offlineBanner,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.black87, fontSize: 13),
+        style: SkType.caption.copyWith(color: sk.medium.foreground),
       ),
     );
   }
@@ -163,19 +226,33 @@ class OfflineBanner extends StatelessWidget {
 /// Label/value row that never overflows: the value truncates gracefully
 /// (long box names, IPs, and translated labels must coexist on 390px).
 class KeyValueRow extends StatelessWidget {
-  const KeyValueRow(this.label, this.value, {super.key, this.valueKey});
+  const KeyValueRow(
+    this.label,
+    this.value, {
+    super.key,
+    this.valueKey,
+    this.mono = false,
+  });
 
   final String label;
   final String value;
   final Key? valueKey;
 
+  /// Ids, addresses and versions are monospaced in the comp so digits line
+  /// up and a value does not re-flow as it changes.
+  final bool mono;
+
   @override
   Widget build(BuildContext context) {
+    final sk = context.sk;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label)),
+          Expanded(
+            child:
+                Text(label, style: SkType.detail.copyWith(color: sk.textMuted)),
+          ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
@@ -183,7 +260,11 @@ class KeyValueRow extends StatelessWidget {
               key: valueKey,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: SkType.detail.copyWith(
+                fontWeight: FontWeight.w600,
+                color: sk.textPrimary,
+                fontFamilyFallback: mono ? SkType.mono : null,
+              ),
             ),
           ),
         ],
@@ -192,21 +273,125 @@ class KeyValueRow extends StatelessWidget {
   }
 }
 
-/// Card with consistent padding used across dashboard/health screens.
+/// The comp's white card: one-pixel border, no shadow, generous radius.
 class PanelCard extends StatelessWidget {
-  const PanelCard({super.key, required this.child, this.onTap});
+  const PanelCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.padding = const EdgeInsets.all(SkSpace.cardPadding),
+  });
 
   final Widget child;
   final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+          horizontal: SkSpace.screenGutter, vertical: 4),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(padding: const EdgeInsets.all(16), child: child),
+        borderRadius: BorderRadius.circular(SkRadius.card),
+        child: Padding(padding: padding, child: child),
+      ),
+    );
+  }
+}
+
+/// A tappable settings/navigation row: icon, label, chevron.
+class NavRow extends StatelessWidget {
+  const NavRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final sk = context.sk;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          border: last ? null : Border(bottom: BorderSide(color: sk.divider)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: sk.textSecondary),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(label,
+                  style: SkType.rowTitle.copyWith(
+                      fontWeight: FontWeight.w400, color: sk.textPrimary)),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: sk.borderStrong),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The comp's segmented control (alert shelves, theme, cache size).
+class SkSegmented<T> extends StatelessWidget {
+  const SkSegmented({
+    super.key,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    this.keyPrefix,
+  });
+
+  final List<(T value, String label)> options;
+  final T selected;
+  final ValueChanged<T> onSelect;
+  final String? keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final sk = context.sk;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: sk.track,
+        borderRadius: BorderRadius.circular(SkRadius.chip),
+      ),
+      child: Row(
+        children: [
+          for (final (value, label) in options)
+            Expanded(
+              child: GestureDetector(
+                key: keyPrefix == null ? null : Key('$keyPrefix-$value'),
+                onTap: () => onSelect(value),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: value == selected ? sk.card : Colors.transparent,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: value == selected ? sk.textPrimary : sk.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

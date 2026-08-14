@@ -55,10 +55,8 @@ class HealthScreen extends ConsumerWidget {
                             child: Row(
                               children: [
                                 StatusDot(
-                                  color: boxStatusColor(
-                                    subsystem.status,
-                                    Theme.of(context).colorScheme,
-                                  ),
+                                  color:
+                                      boxStatusColor(context, subsystem.status),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(

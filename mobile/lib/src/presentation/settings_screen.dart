@@ -135,7 +135,7 @@ class SettingsScreen extends ConsumerWidget {
                             fontWeight: severity == settings.minAlertSeverity
                                 ? FontWeight.bold
                                 : FontWeight.normal,
-                            color: severityColor(severity),
+                            color: severityColor(context, severity),
                           ),
                         ),
                       ),

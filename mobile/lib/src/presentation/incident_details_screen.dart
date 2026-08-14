@@ -124,7 +124,7 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
     }
     final related = repository.byIncidentId(message.incidentId);
     final pending = message.incidentStatus == IncidentStatus.pendingReview;
-    final color = severityColor(message.severity);
+    final color = severityColor(context, message.severity);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.incidentTitle)),
@@ -347,7 +347,7 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     leading: StatusDot(
-                      color: severityColor(notification.severity),
+                      color: severityColor(context, notification.severity),
                     ),
                     title: Text(
                       '${formatTime(notification.timestamp)} — '

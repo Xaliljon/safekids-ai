@@ -35,7 +35,7 @@ class AppShell extends ConsumerWidget {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(
         key: const Key('live-alert'),
-        backgroundColor: severityColor(live.severity),
+        backgroundColor: severityColor(context, live.severity),
         duration: const Duration(seconds: 6),
         behavior: SnackBarBehavior.floating,
         content: Text(

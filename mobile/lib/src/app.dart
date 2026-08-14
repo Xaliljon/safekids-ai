@@ -6,6 +6,7 @@ import 'application/connection_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'presentation/cameras_screen.dart';
 import 'presentation/dashboard_screen.dart';
+import 'presentation/design.dart';
 import 'presentation/health_screen.dart';
 import 'presentation/incident_details_screen.dart';
 import 'presentation/notification_center_screen.dart';
@@ -69,13 +70,144 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-ThemeData _theme(Brightness brightness) => ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF1F6E43),
-        brightness: brightness,
+/// Material's theme, driven entirely by the design system (see design.dart).
+///
+/// Material components are re-pointed at the comp's palette rather than a
+/// seed colour: the comp's warm paper and single orange action are a
+/// deliberate scheme, and a generated tonal palette would quietly overrule
+/// it. [SkColors] rides along as a theme extension for everything Material
+/// has no slot for — the four severity tones especially.
+ThemeData _theme(Brightness brightness) {
+  final sk = brightness == Brightness.dark ? SkColors.dark : SkColors.light;
+  final base = ThemeData(brightness: brightness, useMaterial3: true);
+  return base.copyWith(
+    extensions: [sk],
+    scaffoldBackgroundColor: sk.surface,
+    dividerColor: sk.divider,
+    colorScheme: ColorScheme(
+      brightness: brightness,
+      primary: sk.accent,
+      onPrimary: sk.onAccent,
+      secondary: sk.accent,
+      onSecondary: sk.onAccent,
+      error: sk.danger,
+      onError: sk.onAccent,
+      surface: sk.surface,
+      onSurface: sk.textPrimary,
+      surfaceContainerHighest: sk.card,
+      outline: sk.border,
+      outlineVariant: sk.divider,
+    ),
+    textTheme: base.textTheme.apply(
+      bodyColor: sk.textPrimary,
+      displayColor: sk.textPrimary,
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: sk.surface,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: sk.textPrimary,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: SkType.pushTitle.copyWith(color: sk.textPrimary),
+    ),
+    cardTheme: CardThemeData(
+      color: sk.card,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(SkRadius.card),
+        side: BorderSide(color: sk.border),
       ),
-      useMaterial3: true,
-    );
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: sk.textPrimary,
+      contentTextStyle: SkType.detail.copyWith(color: sk.surface),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(SkRadius.control),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: sk.card,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(SkRadius.card),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: sk.accent,
+        foregroundColor: sk.onAccent,
+        textStyle: SkType.rowTitle,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SkRadius.control),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: sk.textPrimary,
+        backgroundColor: sk.card,
+        textStyle: SkType.rowTitle,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        side: BorderSide(color: sk.borderStrong),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SkRadius.control),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: sk.accent,
+        textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: sk.fill,
+      hintStyle: TextStyle(fontSize: 13.5, color: sk.textFaint),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SkRadius.control),
+        borderSide: BorderSide(color: sk.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SkRadius.control),
+        borderSide: BorderSide(color: sk.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SkRadius.control),
+        borderSide: BorderSide(color: sk.accent),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: sk.card,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: Colors.transparent,
+      elevation: 0,
+      height: 62,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => SkType.navLabel.copyWith(
+          color: states.contains(WidgetState.selected)
+              ? sk.textPrimary
+              : sk.textFaint,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          size: 21,
+          color: states.contains(WidgetState.selected)
+              ? sk.textPrimary
+              : sk.textFaint,
+        ),
+      ),
+    ),
+  );
+}
 
 class GuardianApp extends ConsumerWidget {
   const GuardianApp({super.key});

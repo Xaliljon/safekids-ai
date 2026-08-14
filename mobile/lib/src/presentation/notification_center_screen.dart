@@ -106,7 +106,7 @@ class _NotificationCenterScreenState
                       label: Text(severityLabel(l10n, severity)),
                       selected: _filter.severities.contains(severity),
                       checkmarkColor: Colors.white,
-                      selectedColor: severityColor(severity),
+                      selectedColor: severityColor(context, severity),
                       labelStyle: TextStyle(
                         color: _filter.severities.contains(severity)
                             ? Colors.white
@@ -256,7 +256,7 @@ class _NotificationTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final message = item.message;
-    final color = severityColor(message.severity);
+    final color = severityColor(context, message.severity);
     final weight = item.read ? FontWeight.normal : FontWeight.bold;
     final archived = item.archived;
     return ListTile(

@@ -2,29 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:guardian_core/guardian_core.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import 'design.dart';
 
-/// Shared severity color scale (calm green never appears on alerts).
-Color severityColor(Severity severity) => switch (severity) {
-      Severity.low => Colors.blueGrey,
-      Severity.medium => Colors.orange,
-      Severity.high => Colors.deepOrange,
-      Severity.critical => Colors.red.shade700,
-    };
+/// Severity, box and camera colours all come from the design system now —
+/// these read them off the context so a screen never names a colour, and
+/// light/dark stay one decision instead of many (see design.dart).
+///
+/// Calm green never appears on an alert: in the comp it means "healthy",
+/// and a green incident would read as one a director may skip.
+Color severityColor(BuildContext context, Severity severity) =>
+    context.sk.toneFor(severity).dot;
 
-Color boxStatusColor(BoxStatus status, ColorScheme scheme) => switch (status) {
-      BoxStatus.ok => Colors.green.shade600,
-      BoxStatus.degraded => Colors.orange,
-      BoxStatus.warning => Colors.orange.shade800,
-      BoxStatus.error => scheme.error,
-      BoxStatus.unknown => Colors.grey,
-    };
+Color boxStatusColor(BuildContext context, BoxStatus status) =>
+    context.sk.statusColor(status);
 
-Color cameraStatusColor(String status) => switch (status) {
-      'healthy' => Colors.green.shade600,
-      'degraded' || 'recovering' => Colors.orange,
-      'unhealthy' => Colors.red.shade700,
-      _ => Colors.grey,
-    };
+Color cameraStatusColor(BuildContext context, String status) =>
+    context.sk.cameraColor(status);
 
 String severityLabel(AppLocalizations l10n, Severity severity) =>
     switch (severity) {
