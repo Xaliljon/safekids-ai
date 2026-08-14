@@ -364,6 +364,12 @@ abstract class AppLocalizations {
   /// **'Potential fall'**
   String get potentialFall;
 
+  /// No description provided for @safetyIncident.
+  ///
+  /// In en, this message translates to:
+  /// **'Safety incident'**
+  String get safetyIncident;
+
   /// No description provided for @severityLow.
   ///
   /// In en, this message translates to:

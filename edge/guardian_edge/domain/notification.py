@@ -23,6 +23,7 @@ from guardian_edge.domain.errors import (
     NotificationError,
     VisionConfigurationError,
 )
+from guardian_edge.domain.event import CandidateEventType
 from guardian_edge.domain.incident import IncidentStatus, SafetyIncident, Severity
 
 
@@ -122,6 +123,13 @@ class Notification:
 
     notification_id: UUID
     incident_id: UUID
+    incident_type: CandidateEventType
+    """What kind of safety event this is. Carried explicitly so a reader
+    never has to *assume* — with more than one event type in SafeKids V1,
+    an unlabelled alert would let a director act on the wrong situation
+    (docs/04: humans decide, so humans must be told what they are deciding
+    about)."""
+
     camera_id: str
     track_id: UUID
     track_display_id: int
@@ -152,6 +160,7 @@ class Notification:
         return cls(
             notification_id=notification_id,
             incident_id=incident.incident_id,
+            incident_type=incident.incident_type,
             camera_id=incident.camera_id,
             track_id=incident.track_id,
             track_display_id=incident.track_display_id,
@@ -216,7 +225,11 @@ class Notification:
             "track_id": str(self.track_id),
             "track_display_id": self.track_display_id,
             "correlation_id": str(self.correlation_id),
+            # "type" is the kind of *message*; "incident_type" is the kind of
+            # *event*. A reader that confuses the two labels every alert
+            # identically — which is how a zone exit gets shown as a fall.
             "type": "safety_incident",
+            "incident_type": self.incident_type.value,
             "severity": self.severity.value,
             "confidence": self.risk_confidence,
             "incident_status": self.incident_status.value,

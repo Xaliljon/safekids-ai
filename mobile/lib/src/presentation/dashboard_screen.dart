@@ -245,7 +245,7 @@ class _RecentIncidentTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${l10n.potentialFall} — '
+                  '${incidentTypeLabel(l10n, message.incidentType)} — '
                   '${severityLabel(l10n, message.severity)}',
                   style: TextStyle(
                     fontWeight: item.read ? FontWeight.normal : FontWeight.bold,

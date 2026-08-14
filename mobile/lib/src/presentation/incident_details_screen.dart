@@ -141,7 +141,7 @@ class _IncidentDetailsScreenState extends ConsumerState<IncidentDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${l10n.potentialFall} — '
+                    '${incidentTypeLabel(l10n, message.incidentType)} — '
                     '${severityLabel(l10n, message.severity).toUpperCase()}',
                     style: Theme.of(context)
                         .textTheme

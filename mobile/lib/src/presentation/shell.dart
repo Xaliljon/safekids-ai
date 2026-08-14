@@ -39,7 +39,8 @@ class AppShell extends ConsumerWidget {
         duration: const Duration(seconds: 6),
         behavior: SnackBarBehavior.floating,
         content: Text(
-          '${l10n.potentialFall} — ${severityLabel(l10n, live.severity)} · '
+          '${incidentTypeLabel(l10n, live.incidentType)} — '
+          '${severityLabel(l10n, live.severity)} · '
           '${live.cameraId}',
           style: const TextStyle(color: Colors.white),
         ),

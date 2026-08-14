@@ -234,7 +234,7 @@ def build_runtime(
             "cameras": lambda: _camera_status(camera_service),
             "inference": lambda: _pipeline_status(pipeline),
             "tracking": lambda: {"status": "ok", "last_latency_ms": tracking_gauge.value()},
-            "risk": lambda: {"status": "ok", **_risk_status(risk_engine)},
+            "risk": lambda: _risk_status(risk_engine),
             "notifications": lambda: _notification_status(notification_engine),
             "evidence": lambda: {
                 **evidence_recorder.stats(),
@@ -324,11 +324,16 @@ def _event_status(event_engine: EventEngine) -> dict[str, Any]:
 def _risk_status(risk_engine: RiskEngine) -> dict[str, Any]:
     stats = risk_engine.stats()
     return {
+        # Dropped candidates mean a detector is running that no policy covers
+        # — the box looks healthy while producing no alerts for that event
+        # type. That is a degraded box, and it must say so.
+        "status": "degraded" if stats.ignored_no_policy else "ok",
         "open_incidents": stats.open_incidents,
         "opened_total": stats.incidents_opened,
         "candidates_received": stats.candidates_received,
         "suppressed_low_confidence": stats.suppressed_low_confidence,
         "suppressed_after_dismissal": stats.suppressed_after_dismissal,
+        "ignored_no_policy": stats.ignored_no_policy,
         "events_correlated": stats.events_correlated,
         "escalations": stats.escalations,
     }

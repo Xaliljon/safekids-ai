@@ -148,6 +148,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get potentialFall => 'Ehtimoliy yiqilish';
 
   @override
+  String get safetyIncident => 'Xavfsizlik hodisasi';
+
+  @override
   String get severityLow => 'Past';
 
   @override

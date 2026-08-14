@@ -144,6 +144,7 @@ class TestPayload:
             "track_display_id",
             "correlation_id",
             "type",
+            "incident_type",
             "severity",
             "confidence",
             "incident_status",
@@ -155,6 +156,28 @@ class TestPayload:
         }
         assert payload["severity"] == "medium"
         assert payload["confidence"] == 0.7
+
+    def test_payload_names_the_kind_of_event_it_reports(self) -> None:
+        """A reader must never have to guess what happened: 'type' is the
+        message kind, 'incident_type' is the event kind, and they are not
+        interchangeable (an unnamed alert gets shown under the wrong name)."""
+        incident = make_safety_incident()
+        payload = make_notification().to_payload()
+
+        assert payload["type"] == "safety_incident"
+        assert payload["incident_type"] == incident.incident_type.value
+        assert payload["incident_type"] == "potential_fall"
+
+    def test_the_notification_inherits_its_incidents_type(self) -> None:
+        incident = make_safety_incident()
+        notification = Notification.for_incident(
+            incident,
+            priority=NotificationPriority.STANDARD,
+            channel="local-push",
+            notification_id=uuid4(),
+            created_at=timestamp(1),
+        )
+        assert notification.incident_type is incident.incident_type
 
     def test_payload_carries_no_media_and_no_pii(self) -> None:
         payload = make_notification().to_payload()

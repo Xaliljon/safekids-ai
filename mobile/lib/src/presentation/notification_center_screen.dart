@@ -269,7 +269,8 @@ class _NotificationTile extends ConsumerWidget {
             : const Icon(Icons.circle, size: 8, color: Colors.white),
       ),
       title: Text(
-        '${l10n.potentialFall} — ${severityLabel(l10n, message.severity)} '
+        '${incidentTypeLabel(l10n, message.incidentType)} — '
+        '${severityLabel(l10n, message.severity)} '
         '${(message.confidence * 100).round()}%',
         style: TextStyle(fontWeight: weight),
       ),

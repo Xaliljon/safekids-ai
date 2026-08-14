@@ -148,6 +148,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get potentialFall => 'Возможное падение';
 
   @override
+  String get safetyIncident => 'Инцидент безопасности';
+
+  @override
   String get severityLow => 'Низкая';
 
   @override

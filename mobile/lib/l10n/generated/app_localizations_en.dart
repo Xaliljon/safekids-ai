@@ -147,6 +147,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get potentialFall => 'Potential fall';
 
   @override
+  String get safetyIncident => 'Safety incident';
+
+  @override
   String get severityLow => 'Low';
 
   @override

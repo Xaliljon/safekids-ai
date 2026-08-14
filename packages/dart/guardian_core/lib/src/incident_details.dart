@@ -1,3 +1,4 @@
+import 'incident_type.dart';
 import 'severity.dart';
 
 /// One explainable signal contributing to a candidate event's confidence.
@@ -42,6 +43,7 @@ class IncidentEvent {
 class IncidentDetails {
   const IncidentDetails({
     required this.incidentId,
+    required this.incidentType,
     required this.cameraId,
     required this.trackId,
     required this.trackDisplayId,
@@ -57,6 +59,10 @@ class IncidentDetails {
   });
 
   final String incidentId;
+
+  /// What kind of safety event this is.
+  final IncidentType incidentType;
+
   final String cameraId;
   final String trackId;
   final int trackDisplayId;
@@ -73,6 +79,10 @@ class IncidentDetails {
   factory IncidentDetails.fromJson(Map<String, dynamic> json) =>
       IncidentDetails(
         incidentId: json['incident_id'] as String,
+        // This endpoint spells it 'type'; notification payloads spell it
+        // 'incident_type' because their 'type' already names the message
+        // kind. Same vocabulary, two keys — do not unify one side only.
+        incidentType: IncidentType.fromWire(json['type']),
         cameraId: json['camera_id'] as String,
         trackId: json['track_id'] as String,
         trackDisplayId: json['track_display_id'] as int,

@@ -9,6 +9,7 @@ Map<String, dynamic> samplePayload({String severity = 'critical'}) => {
       'track_display_id': 7,
       'correlation_id': 'c-1',
       'type': 'safety_incident',
+      'incident_type': 'potential_fall',
       'severity': severity,
       'confidence': 0.91,
       'incident_status': 'pending_review',
@@ -40,6 +41,26 @@ void main() {
       expect(restored.notificationId, message.notificationId);
       expect(restored.severity, message.severity);
       expect(restored.summary, message.summary);
+    });
+
+    test('carries the kind of event, never assumes it', () {
+      final message = NotificationMessage.fromJson(samplePayload());
+      expect(message.incidentType, IncidentType.potentialFall);
+      expect(
+        NotificationMessage.fromJson(message.toJson()).incidentType,
+        IncidentType.potentialFall,
+        reason: 'the cached copy must not lose what kind of event it was',
+      );
+    });
+
+    test('a payload without an event kind degrades, it does not guess', () {
+      // A box older than this field, or a cache entry written before it.
+      final payload = samplePayload()..remove('incident_type');
+      expect(
+        NotificationMessage.fromJson(payload).incidentType,
+        IncidentType.unknown,
+        reason: 'silence about the type is not evidence of a fall',
+      );
     });
 
     test('unknown severity fails loudly, never silently', () {
@@ -89,9 +110,34 @@ void main() {
         ],
         'review': null,
       });
+      expect(details.incidentType, IncidentType.potentialFall);
       expect(details.events, hasLength(1));
       expect(details.events.first.signals.first.name, 'downward_velocity');
       expect(details.reviewer, isNull);
+    });
+  });
+
+  group('IncidentType', () {
+    test('parses the vocabulary the edge domain publishes', () {
+      expect(
+          IncidentType.fromWire('potential_fall'), IncidentType.potentialFall);
+      expect(IncidentType.potentialFall.wire, 'potential_fall');
+    });
+
+    test('an unknown or missing type never becomes a known one', () {
+      // Deliberately lenient (see IncidentType): a box updated ahead of the
+      // phones must not have its alerts thrown away — but it must not have
+      // them mislabelled either.
+      for (final wire in <Object?>[
+        'zone_exit',
+        'continuous_cry',
+        '',
+        null,
+        7
+      ]) {
+        expect(IncidentType.fromWire(wire), IncidentType.unknown,
+            reason: 'unrecognized wire value: $wire');
+      }
     });
   });
 

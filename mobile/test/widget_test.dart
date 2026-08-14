@@ -60,6 +60,26 @@ void main() {
       expect(find.byKey(const Key('incident-list')), findsOneWidget);
     });
 
+    appTest('an unnamed event is never shown as a fall', (tester) async {
+      // A box running a detector this app build predates (zone exit, cry),
+      // or a cache entry written before the type reached the wire. The
+      // alert must still arrive — under a neutral name, not a wrong one.
+      final harness = await pumpApp(
+        tester,
+        setup: (api, statusApi, cache) {
+          cache.box = testBox;
+          api
+            ..syncCursor = 1
+            ..missed = [makeMessage(id: 'n-1', incidentType: null)];
+        },
+      );
+      harness.api.incidentDetails = makeDetails();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Potential fall'), findsNothing,
+          reason: 'guessing the event type misinforms the director');
+      expect(find.textContaining('Safety incident'), findsWidgets);
+    });
+
     appTest('degraded box shows warning status and warnings', (tester) async {
       await pumpApp(
         tester,

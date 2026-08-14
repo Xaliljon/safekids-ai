@@ -34,6 +34,17 @@ String severityLabel(AppLocalizations l10n, Severity severity) =>
       Severity.critical => l10n.severityCritical,
     };
 
+/// The event's own name — read from the incident, never assumed.
+///
+/// An event type this build does not know renders as the neutral
+/// "Safety incident": severity, camera, time and summary still tell the
+/// director what to look at, and nothing claims to be something it isn't.
+String incidentTypeLabel(AppLocalizations l10n, IncidentType type) =>
+    switch (type) {
+      IncidentType.potentialFall => l10n.potentialFall,
+      IncidentType.unknown => l10n.safetyIncident,
+    };
+
 String incidentStatusLabel(AppLocalizations l10n, IncidentStatus status) =>
     switch (status) {
       IncidentStatus.pendingReview => l10n.statusPendingReview,

@@ -11,11 +11,13 @@ NotificationMessage makeMessage({
   String incidentId = 'i-1',
   String severity = 'critical',
   String status = 'pending_review',
+  String? incidentType = 'potential_fall',
   DateTime? timestamp,
 }) {
   return NotificationMessage.fromJson({
     'notification_id': id,
     'incident_id': incidentId,
+    if (incidentType != null) 'incident_type': incidentType,
     'camera_id': 'classroom-1',
     'track_id': 't-1',
     'track_display_id': 7,
@@ -36,6 +38,7 @@ IncidentDetails makeDetails({
 }) {
   return IncidentDetails.fromJson({
     'incident_id': incidentId,
+    'type': 'potential_fall',
     'camera_id': 'classroom-1',
     'track_id': 't-1',
     'track_display_id': 7,

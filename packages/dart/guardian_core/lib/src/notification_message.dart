@@ -1,3 +1,4 @@
+import 'incident_type.dart';
 import 'severity.dart';
 
 /// One notification payload from the Guardian Box (metadata only —
@@ -6,6 +7,7 @@ class NotificationMessage {
   const NotificationMessage({
     required this.notificationId,
     required this.incidentId,
+    required this.incidentType,
     required this.cameraId,
     required this.trackId,
     required this.trackDisplayId,
@@ -20,6 +22,11 @@ class NotificationMessage {
 
   final String notificationId;
   final String incidentId;
+
+  /// What kind of safety event this is. Never assume it — an alert shown
+  /// under the wrong name is worse than an alert shown under no name.
+  final IncidentType incidentType;
+
   final String cameraId;
   final String trackId;
   final int trackDisplayId;
@@ -35,6 +42,7 @@ class NotificationMessage {
     return NotificationMessage(
       notificationId: json['notification_id'] as String,
       incidentId: json['incident_id'] as String,
+      incidentType: IncidentType.fromWire(json['incident_type']),
       cameraId: json['camera_id'] as String,
       trackId: json['track_id'] as String,
       trackDisplayId: json['track_display_id'] as int,
@@ -52,6 +60,7 @@ class NotificationMessage {
   Map<String, dynamic> toJson() => {
         'notification_id': notificationId,
         'incident_id': incidentId,
+        'incident_type': incidentType.wire,
         'camera_id': cameraId,
         'track_id': trackId,
         'track_display_id': trackDisplayId,
@@ -70,6 +79,7 @@ class NotificationMessage {
     return NotificationMessage(
       notificationId: notificationId,
       incidentId: incidentId,
+      incidentType: incidentType,
       cameraId: cameraId,
       trackId: trackId,
       trackDisplayId: trackDisplayId,
