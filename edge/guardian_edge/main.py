@@ -271,7 +271,7 @@ def build_runtime(
                 "buffer": frame_ring.stats(),
             },
             "events": lambda: {"status": "ok", **_event_status(event_engine)},
-            "clock": lambda: clock.status().to_dict(),
+            "clock": lambda: _clock_status(clock, zones),
             "zones": lambda: _zone_status(zones, clock),
             "debug": debug_recorder.counters,
         },
@@ -351,6 +351,22 @@ def _event_status(event_engine: EventEngine) -> dict[str, Any]:
         "events_emitted": dict(stats.events_emitted),
         "detector_errors": stats.detector_errors,
     }
+
+
+def _clock_status(clock: ClockTrust, zones: list[Zone]) -> dict[str, Any]:
+    """Clock trust, degraded only when something actually depends on it.
+
+    The same rule `guardianctl diagnose` applies: an untrusted clock on a
+    box whose zones declare no hours changes nothing, and a box that
+    reports degraded forever is a box whose health nobody reads. Found by
+    running the demo on a Mac, where there is no systemd timesync
+    interface, so provenance is unknowable and every box said degraded.
+    """
+    status = clock.status()
+    payload = status.to_dict()
+    if status.trusted or not any(zone.active_windows for zone in zones):
+        payload["status"] = "ok"
+    return payload
 
 
 def _configured_zone(clock: ClockTrust) -> tzinfo | None:
