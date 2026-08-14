@@ -270,3 +270,82 @@ def test_all_five_variants_registered_and_none_reserved() -> None:
         name = f"yolox-{variant}"
         assert name not in reserved_families()
         assert get_family(name).license == "Apache-2.0"
+
+
+class TestCheckpointNamespaceAlignment:
+    """Guardian's own checkpoints must load back (Sprint 20.2).
+
+    They did not. Training saves ``OfficialYoloxWrapper.state_dict()``,
+    whose keys carry a ``yolox_model.`` prefix, while ``load_into``
+    receives the bare YOLOX module — so every key missed, and
+    ``load_state_dict(strict=False)`` reported it only to the log. The
+    model then evaluated as noise: 0 detections on 3692 test images.
+    """
+
+    class _Bare:
+        def __init__(self) -> None:
+            self._sd = {"backbone.conv.weight": 1, "head.cls_preds.0.weight": 2}
+
+        def state_dict(self):  # noqa: ANN201
+            return self._sd
+
+    class _Wrapped:
+        def __init__(self) -> None:
+            self._sd = {
+                "yolox_model.backbone.conv.weight": 1,
+                "yolox_model.head.cls_preds.0.weight": 2,
+            }
+
+        def state_dict(self):  # noqa: ANN201
+            return self._sd
+
+    def test_a_wrapped_checkpoint_loads_into_a_bare_model(self) -> None:
+        wrapped = {"yolox_model.backbone.conv.weight": 9, "yolox_model.head.cls_preds.0.weight": 8}
+
+        aligned = checkpoints._align_namespace(wrapped, self._Bare())
+
+        assert set(aligned) == {"backbone.conv.weight", "head.cls_preds.0.weight"}
+
+    def test_a_bare_checkpoint_loads_into_a_wrapped_model(self) -> None:
+        bare = {"backbone.conv.weight": 9, "head.cls_preds.0.weight": 8}
+
+        aligned = checkpoints._align_namespace(bare, self._Wrapped())
+
+        assert set(aligned) == {
+            "yolox_model.backbone.conv.weight",
+            "yolox_model.head.cls_preds.0.weight",
+        }
+
+    def test_an_already_aligned_checkpoint_is_left_alone(self) -> None:
+        bare = {"backbone.conv.weight": 9}
+        assert checkpoints._align_namespace(bare, self._Bare()) is bare
+
+    def test_an_unrelated_checkpoint_is_returned_unchanged_to_fail_loudly(self) -> None:
+        # Silently "fixing" a checkpoint from another architecture would
+        # reintroduce exactly the failure this guards against.
+        alien = {"resnet.layer1.weight": 1}
+        assert checkpoints._align_namespace(alien, self._Bare()) is alien
+
+
+class TestHeadFitsBeforeItIsDropped:
+    """The head is dropped only when the checkpoint's own head does not fit.
+
+    Deciding from ``num_classes`` alone discarded a Guardian checkpoint's
+    trained head whenever the model had anything other than 80 classes —
+    which is always.
+    """
+
+    def test_a_matching_head_is_kept(self) -> None:
+        import numpy as np
+
+        sd = {"head.cls_preds.0.weight": np.zeros((4, 8, 1, 1))}
+        assert checkpoints._head_class_count(sd) == 4
+
+    def test_a_coco_head_is_recognised_as_eighty(self) -> None:
+        import numpy as np
+
+        sd = {"head.cls_preds.0.weight": np.zeros((80, 8, 1, 1))}
+        assert checkpoints._head_class_count(sd) == 80
+
+    def test_a_checkpoint_without_a_head_is_not_a_mismatch(self) -> None:
+        assert checkpoints._head_class_count({"backbone.conv.weight": 1}) is None

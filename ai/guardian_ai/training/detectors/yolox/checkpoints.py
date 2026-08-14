@@ -28,7 +28,6 @@ from guardian_ai.training.errors import TrainingConfigurationError
 logger = logging.getLogger(__name__)
 
 MANIFEST_FILE = "checksums.json"
-_COCO_CLASSES = 80
 
 
 def cache_dir() -> Path:
@@ -73,8 +72,16 @@ def load_into(model: Any, checkpoint_path: Path, num_classes: int) -> list[str]:
         raise TrainingConfigurationError(f"checkpoint not found: {checkpoint_path}")
     raw = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     state_dict = raw.get("model", raw) if isinstance(raw, dict) else raw
+    state_dict = _align_namespace(state_dict, model)
     skipped: list[str] = []
-    if num_classes != _COCO_CLASSES:
+    # Drop the head only when the checkpoint's own head genuinely does not
+    # fit this model. Deciding from ``num_classes`` alone was wrong: it is a
+    # property of the model being built, not of the checkpoint, so loading a
+    # Guardian checkpoint (4 classes) into a 4-class model threw away the
+    # very weights that were trained and left a random head. Silently — the
+    # model still ran, and detected nothing.
+    head_classes = _head_class_count(state_dict)
+    if head_classes is not None and head_classes != num_classes:
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("head.")}
         skipped.append("head")
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
@@ -86,6 +93,65 @@ def load_into(model: Any, checkpoint_path: Path, num_classes: int) -> list[str]:
         len(unexpected),
     )
     return skipped
+
+
+def _align_namespace(state_dict: Any, model: Any) -> Any:
+    """Match the checkpoint's key namespace to the model's.
+
+    Two provenances reach this function and they are named differently:
+    an upstream YOLOX checkpoint is a bare ``YOLOX`` state dict, while a
+    Guardian checkpoint was saved from ``OfficialYoloxWrapper`` and so
+    carries a ``yolox_model.`` prefix. ``load_into`` receives the bare
+    model, so a Guardian checkpoint used to match *nothing* — 462 keys
+    unexpected, 388 missing — and ``load_state_dict(strict=False)``
+    reported that only to the log. The model trained fine, loaded
+    silently as noise, and detected nothing.
+
+    Aligning here rather than at the call site keeps both provenances
+    working through one entry point, which is the property that was
+    missing.
+    """
+    target = set(model.state_dict())
+    if set(state_dict) & target:
+        return state_dict
+
+    unwrapped = {key.split(".", 1)[1]: value for key, value in state_dict.items() if "." in key}
+    if set(unwrapped) & target:
+        logger.info("checkpoint is wrapped; stripped its outer namespace to match the model")
+        return unwrapped
+
+    prefix = _common_module_prefix(target)
+    if prefix:
+        wrapped = {prefix + key: value for key, value in state_dict.items()}
+        if set(wrapped) & target:
+            logger.info("checkpoint is bare; added the model's %r namespace", prefix)
+            return wrapped
+    return state_dict
+
+
+def _common_module_prefix(keys: set[str]) -> str:
+    """The leading ``module.`` every key shares, or "" when they share none."""
+    if not keys:
+        return ""
+    first = next(iter(keys))
+    head = first.split(".", 1)[0] + "."
+    return head if all(key.startswith(head) for key in keys) else ""
+
+
+def _head_class_count(state_dict: Any) -> int | None:
+    """How many classes this checkpoint's classification head was built for.
+
+    YOLOX's head keeps one ``cls_preds`` convolution per FPN level, shaped
+    ``[num_classes, channels, 1, 1]`` — so the first dimension is the answer.
+    Returns None when the checkpoint carries no head at all (backbone-only
+    exports), which is not a mismatch and must not be treated as one.
+    """
+    for key, value in state_dict.items():
+        if key.startswith("head.cls_preds") and key.endswith(".weight"):
+            shape = getattr(value, "shape", None)
+            if shape is not None and len(shape) >= 1:
+                return int(shape[0])
+    return None
 
 
 def sha256_of(path: Path) -> str:
