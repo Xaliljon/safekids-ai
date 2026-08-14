@@ -23,7 +23,7 @@ way it is (docs/03 §9: documentation explains decisions).
 | ADR-0002 | Dashboard technology (folded into ADR-0001 §8) | — |
 | [ADR-0003](ADR-0003-detector-licensing.md) | Object Detector Selection and Licensing (YOLOX, Apache-2.0) | Accepted |
 | ADR-0004 | Edge/cloud responsibility split | Planned |
-| ADR-0005 | Dataset governance | **Needed before first data collection** |
+| [ADR-0005](ADR-0005-dataset-governance.md) | Dataset Governance (minors, consent, withdrawal) | **Proposed** |
 | [ADR-0006](ADR-0006-vision-pipeline.md) | Vision Pipeline Architecture | Accepted |
 | [ADR-0007](ADR-0007-detection-identity.md) | Detection Identity and Correlation | Accepted |
 | [ADR-0008](ADR-0008-inference-runtime.md) | Inference Runtime Contracts | Accepted |
