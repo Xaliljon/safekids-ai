@@ -171,12 +171,29 @@ def build_le2i_raw(root: Path) -> Path:
 
 
 def build_gmdcsa24_raw(root: Path) -> Path:
-    write_video(root / "Fall" / "Subject1" / "F1.mp4", seed=4)
-    write_video(root / "ADL" / "Subject1" / "A1.mp4", seed=5)
-    (root / "annotations.json").write_text(
-        json.dumps({"Fall/Subject1/F1.mp4": [{"label": "fall", "start_s": 0.5, "end_s": 0.8}]}),
-        encoding="utf-8",
-    )
+    """The layout GMDCSA24 actually ships, header spacing included.
+
+    The previous fixture built `Fall/Subject1/*.mp4` + `annotations.json`,
+    which is what the importer assumed and not what the dataset publishes.
+    Tests passed against an invented archive; the real one could not be
+    imported at all. The header below keeps the shipped CSV's leading space
+    in " Classes" and its "Falling (SW)" subtype, because both are what the
+    parser has to survive.
+    """
+    header = "File Name,Length (seconds),Time of Recording,Attire,Description, Classes\n"
+    for subject in ("Subject 1", "Subject 2"):
+        write_video(root / subject / "Fall" / "01.mp4", seed=4)
+        (root / subject / "Fall.csv").write_text(
+            header + "01.mp4,06, Day (Light On),Full T-shirt,Falling from a chair,"
+            "Falling (SW)[0.5 to 0.8]; Sitting[0 to 0.5]\n",
+            encoding="utf-8",
+        )
+        write_video(root / subject / "ADL" / "01.mp4", seed=5)
+        (root / subject / "ADL.csv").write_text(
+            header + "01.mp4,08, Day (Light On), Full T-shirt,Sitting then lying down,"
+            "Sitting[0 to 0.3]; Sleeping[0.4 to 0.9]\n",
+            encoding="utf-8",
+        )
     return root
 
 

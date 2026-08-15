@@ -49,6 +49,32 @@ Everything lives in `ai/guardian_ai/acquisition/` + the
 | `dataset.json` | ethics-bearing manifest: provenance (`collected_by`, `consent_reference`), privacy posture (`contains_minors`, `anonymized`, `review_reference`), taxonomy binding, license |
 | `train/ val/ test/` | split membership (`clips.jsonl`); assignment is the ADR-0010 hash of the clip's **split group** — seedless, stable under growth |
 
+### Fetching sources
+
+`python -m guardian_ai.dataset fetch <source> --raw <dir>` reconstructs a
+raw dataset directory from the URLs the dataset itself publishes. A dataset
+downloaded by hand has no provenance — nobody can say later which bytes
+trained the model, or whether two engineers got the same corpus — so every
+file is checksum-pinned in `dataset-sources.lock.json`, committed and
+reviewed like code.
+
+An unpinned file is downloaded, its sha256 recorded, and the fetch reports
+`newly_pinned` with a warning. Trust on first use, stated rather than
+hidden: a digest invented by someone who never downloaded the file fails
+every fetch and looks exactly like corruption. After pinning, a mismatch is
+a hard error and the bytes are deleted — a half-trusted corpus on disk is
+how the wrong data gets trained on. Archives are checked for escaping paths
+before anything is unpacked.
+
+| Source | Files | Notes |
+|---|---|---|
+| `urfall` | 2 label CSVs + 70 RGB zips (30 fall, 40 ADL, camera 0) | camera 1 omitted — a second view of the same fall in the same room adds no domain |
+| `gmdcsa24` | one GitHub tarball | `strip_root` drops the `<repo>-master/` wrapper |
+
+Le2i has no spec: its Dijon page has moved more than once and mirrors
+disagree on contents. It is fetched by hand and passed with `--raw`.
+Listing a dead URL would hide that rather than fix it.
+
 ### Split groups
 
 Hashing the clip id put all four Le2i scenes in both train and val: the

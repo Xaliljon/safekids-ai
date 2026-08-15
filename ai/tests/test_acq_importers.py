@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -87,27 +86,74 @@ def test_gmdcsa24_import(tmp_path: Path) -> None:
     workspace = make_workspace(tmp_path)
     result = run_import(get_importer("gmdcsa24"), raw, workspace)
     assert sorted(result.imported) == [
-        "gmdcsa24-adl-subject1-a1",
-        "gmdcsa24-fall-subject1-f1",
+        "gmdcsa24-adl-subject-1-01",
+        "gmdcsa24-adl-subject-2-01",
+        "gmdcsa24-fall-subject-1-01",
+        "gmdcsa24-fall-subject-2-01",
     ]
-    fall = workspace.annotation("gmdcsa24-fall-subject1-f1")
-    assert fall.events[0].label == "fall"
+    fall = workspace.annotation("gmdcsa24-fall-subject-1-01")
+    assert [event.label for event in fall.events] == ["fall", "sitting"]
+
+
+def test_gmdcsa24_maps_sleeping_to_lying_and_drops_unknown_labels(tmp_path: Path) -> None:
+    """Guardian describes body state, never intent: a detector cannot know
+    whether a person on a bed is asleep."""
+    raw = build_gmdcsa24_raw(tmp_path / "raw")
+    csv_path = raw / "Subject 1" / "ADL.csv"
+    csv_path.write_text(
+        csv_path.read_text().replace(
+            "Sitting[0 to 0.3]; Sleeping[0.4 to 0.9]",
+            "Sleeping[0 to 0.3]; Reading[0.4 to 0.9]",
+        ),
+        encoding="utf-8",
+    )
+    workspace = make_workspace(tmp_path)
+    run_import(get_importer("gmdcsa24"), raw, workspace)
+    adl = workspace.annotation("gmdcsa24-adl-subject-1-01")
+    assert [event.label for event in adl.events] == ["lying"]
+
+
+def test_gmdcsa24_groups_by_subject(tmp_path: Path) -> None:
+    """The subject and their home vary together, so both must stay together."""
+    clips = get_importer("gmdcsa24").discover(build_gmdcsa24_raw(tmp_path / "raw"))
+    assert {clip.split_group for clip in clips} == {"Subject 1", "Subject 2"}
 
 
 def test_gmdcsa24_rejects_unannotated_fall_clip(tmp_path: Path) -> None:
     raw = build_gmdcsa24_raw(tmp_path / "raw")
-    (raw / "annotations.json").write_text("{}", encoding="utf-8")
+    csv_path = raw / "Subject 1" / "Fall.csv"
+    csv_path.write_text(
+        csv_path.read_text().replace("Falling (SW)[0.5 to 0.8]; ", ""), encoding="utf-8"
+    )
     with pytest.raises(ImporterError, match="unannotated falls are rejected"):
         run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path))
 
 
-def test_gmdcsa24_rejects_bad_segments(tmp_path: Path) -> None:
+def test_gmdcsa24_rejects_missing_or_malformed_csv(tmp_path: Path) -> None:
     raw = build_gmdcsa24_raw(tmp_path / "raw")
-    (raw / "annotations.json").write_text(
-        json.dumps({"Fall/Subject1/F1.mp4": [{"label": "sprinting", "start_s": 0, "end_s": 1}]})
-    )
-    with pytest.raises(ImporterError, match="not a Guardian event label"):
+    (raw / "Subject 1" / "Fall.csv").unlink()
+    with pytest.raises(ImporterError, match="missing beside"):
         run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path))
+
+    raw2 = build_gmdcsa24_raw(tmp_path / "raw2")
+    (raw2 / "Subject 1" / "Fall.csv").write_text("Name,Notes\n01.mp4,whatever\n")
+    with pytest.raises(ImporterError, match="columns"):
+        run_import(get_importer("gmdcsa24"), raw2, make_workspace(tmp_path / "b"))
+
+
+def test_gmdcsa24_rejects_unparseable_span_and_invalid_times(tmp_path: Path) -> None:
+    raw = build_gmdcsa24_raw(tmp_path / "raw")
+    csv_path = raw / "Subject 1" / "Fall.csv"
+    original = csv_path.read_text()
+    csv_path.write_text(original.replace("Falling (SW)[0.5 to 0.8]", "Falling (SW) 0.5-0.8"))
+    with pytest.raises(ImporterError, match="cannot parse span"):
+        run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path))
+
+    raw2 = build_gmdcsa24_raw(tmp_path / "raw2")
+    csv2 = raw2 / "Subject 1" / "Fall.csv"
+    csv2.write_text(original.replace("Falling (SW)[0.5 to 0.8]", "Falling (SW)[0.8 to 0.5]"))
+    with pytest.raises(ImporterError, match="invalid"):
+        run_import(get_importer("gmdcsa24"), raw2, make_workspace(tmp_path / "b"))
 
 
 def test_import_refuses_missing_and_empty_raw(tmp_path: Path) -> None:
@@ -159,27 +205,3 @@ def test_le2i_no_fall_when_zero_markers(tmp_path: Path) -> None:
     workspace = make_workspace(tmp_path)
     run_import(get_importer("le2i"), raw, workspace)
     assert workspace.annotation("le2i-coffee-room-video-1").events == ()
-
-
-def test_gmdcsa24_rejects_broken_annotations_json(tmp_path: Path) -> None:
-    raw = build_gmdcsa24_raw(tmp_path / "raw")
-    (raw / "annotations.json").write_text("{broken")
-    with pytest.raises(ImporterError, match="not valid JSON"):
-        run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path))
-
-    (raw / "annotations.json").write_text("[1, 2]")
-    with pytest.raises(ImporterError, match="must map"):
-        run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path / "b"))
-
-
-def test_gmdcsa24_rejects_invalid_segment_times_and_shape(tmp_path: Path) -> None:
-    raw = build_gmdcsa24_raw(tmp_path / "raw")
-    (raw / "annotations.json").write_text(
-        json.dumps({"Fall/Subject1/F1.mp4": [{"label": "fall", "start_s": 2.0, "end_s": 1.0}]})
-    )
-    with pytest.raises(ImporterError, match="invalid"):
-        run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path))
-
-    (raw / "annotations.json").write_text(json.dumps({"Fall/Subject1/F1.mp4": [{"label": "fall"}]}))
-    with pytest.raises(ImporterError, match="malformed segment"):
-        run_import(get_importer("gmdcsa24"), raw, make_workspace(tmp_path / "b"))

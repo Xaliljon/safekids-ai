@@ -2,7 +2,7 @@
 
 The whole mandated lifecycle from one entry point:
 
-    import -> annotate -> validate -> review -> publish -> report/statistics
+    fetch -> import -> annotate -> validate -> review -> publish -> report/statistics
 
 plus ``import-pilot`` for Guardian Edge evidence. Every command works on
 a workspace directory (guardian_dataset_v1) or the registry — no hidden
@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from guardian_ai.acquisition.errors import AcquisitionError
+from guardian_ai.acquisition.fetch import LOCKFILE_NAME, SourceLock, fetch_source
 from guardian_ai.acquisition.importers import available_importers, get_importer
 from guardian_ai.acquisition.importers.base import run_import
 from guardian_ai.acquisition.pilot import import_pilot_evidence
@@ -26,6 +27,7 @@ from guardian_ai.acquisition.privacy import check_privacy
 from guardian_ai.acquisition.quality import validate_quality, write_quality_report
 from guardian_ai.acquisition.registry import VideoDatasetRegistry
 from guardian_ai.acquisition.review import ReviewState, ReviewWorkflow
+from guardian_ai.acquisition.sources import available_sources, get_source
 from guardian_ai.acquisition.statistics import compute_statistics, generate_dataset_report
 from guardian_ai.acquisition.workspace import DatasetWorkspace, WorkspaceManifest
 
@@ -53,6 +55,22 @@ def _open_or_create_workspace(arguments: argparse.Namespace) -> DatasetWorkspace
 
 
 # ------------------------------------------------------------------ commands
+
+
+def cmd_fetch(arguments: argparse.Namespace) -> int:
+    spec = get_source(arguments.source)
+    lock = SourceLock(Path(arguments.lockfile))
+    result = fetch_source(spec, Path(arguments.raw), lock, force=arguments.force)
+    payload = result.to_dict()
+    payload["homepage"] = spec.homepage
+    payload["license_note"] = spec.license_note
+    if result.newly_pinned:
+        payload["warning"] = (
+            f"{len(result.newly_pinned)} URL(s) had no pinned checksum and were "
+            f"recorded on trust — review the {LOCKFILE_NAME} diff before committing"
+        )
+    _print(payload)
+    return 0
 
 
 def cmd_import(arguments: argparse.Namespace) -> int:
@@ -190,6 +208,17 @@ def build_parser() -> argparse.ArgumentParser:
         description="Guardian Dataset Platform (Sprint 18)",
     )
     commands = parser.add_subparsers(dest="command", required=True)
+
+    fetch = commands.add_parser("fetch", help="download an open dataset, checksum-pinned")
+    fetch.add_argument("source", choices=available_sources())
+    fetch.add_argument("--raw", required=True, help="raw dataset directory to fill")
+    fetch.add_argument(
+        "--lockfile",
+        default=LOCKFILE_NAME,
+        help=f"checksum lockfile, committed to the repo (default: {LOCKFILE_NAME})",
+    )
+    fetch.add_argument("--force", action="store_true", help="re-download files already on disk")
+    fetch.set_defaults(handler=cmd_fetch)
 
     import_parser = commands.add_parser("import", help="import an open dataset")
     import_parser.add_argument("source", choices=available_importers())
