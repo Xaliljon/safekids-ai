@@ -103,12 +103,41 @@ def test_06_report(workspace: dict[str, Path], capsys: pytest.CaptureFixture) ->
 def test_07_compare_self_promotes(
     workspace: dict[str, Path], capsys: pytest.CaptureFixture
 ) -> None:
+    """The compare CLI, end to end, on a run compared against itself.
+
+    Every clause that a self-comparison determines is asserted here. The
+    latency *verdict* deliberately is not: this fixture's model runs in
+    about 50 microseconds, so benchmarking it twice measures scheduler
+    jitter rather than the model, and the two means differed by enough to
+    flip the verdict on roughly a quarter of full-suite runs. Raising the
+    iteration count was tried and does not help — the noise is a bias
+    between two benchmark passes, not variance within one.
+
+    Widening the gate's slack to absorb it was refused: the slack exists to
+    catch a genuinely slower model, and a test artifact too small to time
+    is not a reason to weaken it. The verdict logic is asserted where it
+    can be deterministic instead — see test_matched_shapes_compare_normally
+    and test_matched_shapes_still_catch_a_real_regression, which drive
+    compare_models with fixed numbers.
+
+    What this test holds is that the CLI wires up, writes its report, and
+    that a model does not reject *itself* on any clause that is actually
+    determined by the comparison.
+    """
     run = run_dir_of(workspace)
-    code = main(["compare", "--candidate", str(run), "--baseline", str(run), "--runs", "5"])
+    code = main(["compare", "--candidate", str(run), "--baseline", str(run), "--runs", "20"])
     payload = json.loads(capsys.readouterr().out)
-    assert payload["verdict"] == "PROMOTE"
-    assert code == 0
+    assert code in (0, 3)
     assert (run / "comparison.json").is_file()
+
+    # The CLI prints the verdict; the full clause breakdown is written out.
+    written = json.loads((run / "comparison.json").read_text())
+    checks = {check["check"]: check for check in written["checks"]}
+    for name in ("precision", "recall", "false_positives", "size_mb"):
+        assert checks[name]["passed"], payload["reasons"]
+    # Both sides are the same artifact, so the latency clause must at least
+    # have found them comparable (ADR-0020) rather than refusing outright.
+    assert checks["latency_ms_mean"]["status"] == "compared"
 
 
 def test_08_promote_into_zoo(workspace: dict[str, Path], capsys: pytest.CaptureFixture) -> None:

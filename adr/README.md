@@ -38,3 +38,4 @@ way it is (docs/03 §9: documentation explains decisions).
 | [ADR-0017](ADR-0017-evidence-management.md) | Evidence Management (Incident Clips) | Accepted |
 | [ADR-0018](ADR-0018-safe-area-zones.md) | Safe-Area Zones and Zone-Exit Candidates | Accepted |
 | [ADR-0019](ADR-0019-evidence-storage-bounds.md) | Evidence Storage Bounds (extends ADR-0017) | **Proposed** |
+| [ADR-0020](ADR-0020-promotion-latency-gate.md) | What the Promotion Latency Gate Compares | **Proposed** |

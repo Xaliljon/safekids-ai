@@ -35,7 +35,15 @@ def evaluation(
     }
 
 
-BENCH = BenchmarkResult(latency_ms_mean=1.0, latency_ms_p95=1.2, memory_mb=10.0, size_mb=0.5)
+# Both sides must record a shape, or the latency clause refuses to
+# compare them at all (ADR-0020) and every other clause goes untested.
+BENCH = BenchmarkResult(
+    latency_ms_mean=1.0,
+    latency_ms_p95=1.2,
+    memory_mb=10.0,
+    size_mb=0.5,
+    input_shape=(1, 3, 416, 416),
+)
 
 
 def test_equal_models_promote() -> None:
@@ -104,4 +112,75 @@ def test_benchmark_onnx_measures_a_real_model(tmp_path: Path) -> None:
     assert result.size_mb > 0
     assert result.memory_mb >= 0
     payload = result.to_dict()
-    assert set(payload) == {"latency_ms_mean", "latency_ms_p95", "memory_mb", "size_mb"}
+    assert set(payload) == {
+        "latency_ms_mean",
+        "latency_ms_p95",
+        "memory_mb",
+        "size_mb",
+        # The workload the timings describe — without it a ratio
+        # between two benchmarks cannot be known to be valid.
+        "input_shape",
+    }
+
+
+# --------------------------------------------- ADR-0020: what is comparable
+
+
+def _bench(mean: float, shape: tuple[int, ...]) -> BenchmarkResult:
+    return BenchmarkResult(
+        latency_ms_mean=mean,
+        latency_ms_p95=mean * 1.1,
+        memory_mb=100.0,
+        size_mb=10.0,
+        input_shape=shape,
+    )
+
+
+def test_mismatched_input_shapes_are_not_compared() -> None:
+    """Sprint 20's rejection, reproduced. The candidate is exactly as fast
+    as the baseline at matched input; the ratio measured 640/416, not the
+    weights."""
+    result = compare_models(
+        evaluation(),
+        evaluation(),
+        _bench(35.51, (1, 3, 640, 640)),
+        _bench(18.45, (1, 3, 416, 416)),
+    )
+    latency = next(c for c in result["checks"] if c["check"] == "latency_ms_mean")
+    assert latency["status"] == "not_comparable"
+    assert latency["passed"] is False
+    assert "limit" not in latency
+    assert result["verdict"] == "REJECT"
+    assert any("not comparable" in reason for reason in result["reasons"])
+
+
+def test_matched_shapes_compare_normally() -> None:
+    result = compare_models(
+        evaluation(), evaluation(), _bench(18.41, (1, 3, 416, 416)), _bench(18.45, (1, 3, 416, 416))
+    )
+    latency = next(c for c in result["checks"] if c["check"] == "latency_ms_mean")
+    assert latency["status"] == "compared"
+    assert latency["passed"] is True
+    assert result["verdict"] == "PROMOTE"
+
+
+def test_matched_shapes_still_catch_a_real_regression() -> None:
+    """Refusing invalid ratios must not blunt the clause that works."""
+    result = compare_models(
+        evaluation(), evaluation(), _bench(30.0, (1, 3, 416, 416)), _bench(18.0, (1, 3, 416, 416))
+    )
+    assert result["verdict"] == "REJECT"
+    assert any("regressed beyond +20%" in reason for reason in result["reasons"])
+
+
+def test_unknown_shapes_do_not_pass_silently() -> None:
+    """A caller that never recorded the shape gets a refusal, not a pass —
+    the default must fail closed."""
+    result = compare_models(
+        evaluation(),
+        evaluation(),
+        BenchmarkResult(18.0, 19.0, 100.0, 10.0),
+        _bench(18.0, (1, 3, 416, 416)),
+    )
+    latency = next(c for c in result["checks"] if c["check"] == "latency_ms_mean")
+    assert latency["status"] == "not_comparable"

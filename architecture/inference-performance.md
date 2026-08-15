@@ -73,6 +73,19 @@ must be re-measured on the Edge target rather than carried over from a Mac.
 PyTorch 56.52 ms vs ONNX Runtime 33.45 ms on the same tensor at the same
 thread count — **1.69×**.
 
+### The gate no longer divides mismatched workloads
+
+ADR-0020 §1 is implemented: `compare_models` records each benchmark's input
+shape and, where the two differ — or where either is unrecorded — reports
+the latency clause as `not_comparable` instead of publishing a ratio. It
+does not pass; refusing to answer is honest, and answering with an invalid
+ratio cost a sprint.
+
+The relative +20% clause is unchanged where the shapes match, and still
+catches a genuine regression. ADR-0020 §§2-4 — the absolute Edge budget and
+what an approver is told when it is unmeasured — remain Proposed and
+unimplemented, because they are decisions rather than defect fixes.
+
 ### Resolution is not a latency lever
 
 The candidate trains at 640. Re-exporting the same weights at 416 passes the
