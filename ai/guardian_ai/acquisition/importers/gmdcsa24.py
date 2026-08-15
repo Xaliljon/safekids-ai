@@ -58,6 +58,10 @@ class Gmdcsa24Importer:
                             "category": category.lower(),
                             "subjects": "adult",
                         },
+                        # Four subjects, each filmed in their own home: the
+                        # person and their room vary together, so the
+                        # subject is the group.
+                        split_group=subject,
                     )
                 )
         if not clips:

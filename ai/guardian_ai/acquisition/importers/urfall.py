@@ -54,6 +54,12 @@ class UrFallImporter:
                     source_fps=_SOURCE_FPS,
                     events=self._events_from_labels(labels[sequence]),
                     attributes={"camera_angle": "side", "subjects": "adult"},
+                    # One laboratory, one fixed camera, and the public
+                    # labels do not identify the subject — so the whole
+                    # corpus is a single group. Splitting it internally
+                    # would produce the same same-room score Le2i did;
+                    # kept whole it is a genuine held-out domain.
+                    split_group="urfall",
                 )
             )
         return clips

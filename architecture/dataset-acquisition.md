@@ -47,7 +47,31 @@ Everything lives in `ai/guardian_ai/acquisition/` + the
 | Path | Contents |
 |---|---|
 | `dataset.json` | ethics-bearing manifest: provenance (`collected_by`, `consent_reference`), privacy posture (`contains_minors`, `anonymized`, `review_reference`), taxonomy binding, license |
-| `train/ val/ test/` | split membership (`clips.jsonl`); assignment is the ADR-0010 hash of the clip id — seedless, stable under growth |
+| `train/ val/ test/` | split membership (`clips.jsonl`); assignment is the ADR-0010 hash of the clip's **split group** — seedless, stable under growth |
+
+### Split groups
+
+Hashing the clip id put all four Le2i scenes in both train and val: the
+model trained on clips filmed in `home-01` and was validated on different
+clips filmed in the same room, from the same fixed camera, under the same
+lighting. `val_f1` reached 1.0 at epoch 3 and the reported precision of
+0.9902 described four rooms rather than generalization (see the candidate
+provenance review).
+
+So an importer declares `SourceClip.split_group` — whatever recurs across
+clips and lets a model memorize instead of learn:
+
+| Source | Group | Why |
+|---|---|---|
+| Le2i | the scene | four rooms, each with its own fixed camera |
+| UR Fall | the whole corpus | one laboratory, one camera, and the public labels do not identify subjects — kept whole it is a genuine held-out domain |
+| GMDCSA24 | the subject | four subjects, each filmed in their own home |
+
+`None` falls back to the clip id, which is only correct when every clip is
+genuinely independent. `workspace.straddling_groups()` returns any group
+appearing in more than one split; it should always be empty, and one test
+per shipped importer asserts that each declares a group at all — a
+fixed-camera corpus that forgets to would silently reintroduce the leak.
 | `videos/` | normalized clips only |
 | `annotations/` | one Guardian Video Annotation v1 JSON per clip |
 | `metadata/` | per-clip provenance + `review.json` + `quality-report.json` + `dataset-report.pdf` |

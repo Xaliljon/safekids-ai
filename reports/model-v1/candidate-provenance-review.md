@@ -104,6 +104,24 @@ None of these are code defects — they are dataset and configuration
 decisions, and they belong to the same architecture review Sprint 20.2 is
 already waiting on.
 
+### Update: fix 1 is built
+
+Splitting is now by **split group** rather than by clip id. An importer
+declares what must not straddle splits — the scene for Le2i, the subject
+for GMDCSA24, the whole corpus for UR Fall (one laboratory, one camera, and
+no subject identifiers in the public labels). `straddling_groups()` reports
+any group appearing in more than one split, and one test per shipped
+importer asserts a group is declared at all.
+
+This does not retroactively fix `guardian-fall-detection-v1@1.0.0` — that
+version was published under the old assignment and versions are immutable.
+The number it produced still describes four rooms. What changed is that the
+*next* import cannot repeat it, which is the precondition for fixes 2 and 3
+meaning anything.
+
+Fix 2 (a metric with headroom) and fix 3 (kindergarten footage) are
+untouched and still belong to the architecture review.
+
 ## Sprint 20.2 addendum: the like-for-like latency comparison
 
 The architecture review needs to know whether the candidate is genuinely

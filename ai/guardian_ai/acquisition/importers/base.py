@@ -46,6 +46,16 @@ class SourceClip:
     events: tuple[EventSpan, ...] = ()  # source-timeline frames
     frames: tuple[FrameAnnotation, ...] = ()  # source-timeline, pixel boxes already normalized
     attributes: dict[str, str] = field(default_factory=dict)
+    split_group: str | None = None
+    """What must not straddle train/val/test.
+
+    Splitting by clip is not enough, and the candidate provenance review is
+    the proof: every validation scene was also a training scene, so
+    ``val_f1`` hit 1.0 at epoch 3 and measured same-room recognition rather
+    than generalization. The group is whatever recurs across clips and lets
+    a model memorize instead — the room and fixed camera for Le2i, the
+    subject for UR Fall and GMDCSA24. ``None`` falls back to the clip id,
+    which is only correct when every clip is genuinely independent."""
 
 
 class DatasetImporter(Protocol):
@@ -95,7 +105,9 @@ def run_import(
                 },
                 **{f"attr_{key}": value for key, value in clip.attributes.items()},
             }
-            split = workspace.add_clip(clip.clip_id, normalized, annotation, metadata)
+            split = workspace.add_clip(
+                clip.clip_id, normalized, annotation, metadata, split_group=clip.split_group
+            )
         imported.append(clip.clip_id)
         splits[clip.clip_id] = split
         logger.info("imported %s -> %s split", clip.clip_id, split)

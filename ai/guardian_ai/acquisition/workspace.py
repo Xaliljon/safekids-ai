@@ -11,8 +11,10 @@
       metadata/review.json    review workflow state + audit history
       taxonomy/taxonomy.json  the bound taxonomy snapshot
 
-Split assignment is the ADR-0010 hash function of the clip id — stable,
-seedless, growth-proof.
+Split assignment is the ADR-0010 hash function — stable, seedless,
+growth-proof — applied to the clip's *split group* (its room, camera or
+subject) rather than to the clip id, so material that recurs across clips
+cannot straddle train and val.
 """
 
 from __future__ import annotations
@@ -146,9 +148,17 @@ class DatasetWorkspace:
         video_source: Path,
         annotation: ClipAnnotation,
         metadata: dict[str, Any],
+        split_group: str | None = None,
     ) -> str:
         """Register a normalized clip; returns its split. Move, not copy —
-        the normalizer already produced the file; raws are never stored."""
+        the normalizer already produced the file; raws are never stored.
+
+        The split is hashed from ``split_group`` when the importer names one,
+        so every clip sharing a room, camera or subject lands in the same
+        split. Hashing the clip id instead is what let all four Le2i scenes
+        appear in both train and val, and a validation set that shares its
+        rooms with training cannot report generalization.
+        """
         if clip_id != annotation.clip_id:
             raise AcquisitionError(
                 f"clip id '{clip_id}' does not match annotation '{annotation.clip_id}'"
@@ -159,10 +169,42 @@ class DatasetWorkspace:
         video_source.replace(destination)
         save_annotation(annotation, self.annotation_path(clip_id))
         _write_json(self.metadata_path(clip_id), metadata)
-        split = assign_split(clip_id)
+        split = assign_split(split_group or clip_id)
+        entry: dict[str, Any] = {"clip_id": clip_id}
+        if split_group is not None:
+            entry["split_group"] = split_group
         with (self.root / split / SPLIT_FILE).open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"clip_id": clip_id}) + "\n")
+            handle.write(json.dumps(entry) + "\n")
         return split
+
+    def split_groups(self, split: str | None = None) -> dict[str, str]:
+        """Group key per clip id, for clips whose importer declared one."""
+        splits = (split,) if split else SPLIT_NAMES
+        groups: dict[str, str] = {}
+        for name in splits:
+            path = self.root / name / SPLIT_FILE
+            if not path.is_file():
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                if entry.get("split_group") is not None:
+                    groups[str(entry["clip_id"])] = str(entry["split_group"])
+        return groups
+
+    def straddling_groups(self) -> dict[str, list[str]]:
+        """Group keys that appear in more than one split — should be empty.
+
+        The check the candidate provenance review had to do by hand. It is
+        cheap, and it is the only thing standing between a future import and
+        a validation score that measures memorization.
+        """
+        per_group: dict[str, set[str]] = {}
+        for split in SPLIT_NAMES:
+            for group in self.split_groups(split).values():
+                per_group.setdefault(group, set()).add(split)
+        return {group: sorted(splits) for group, splits in per_group.items() if len(splits) > 1}
 
     def clip_ids(self, split: str | None = None) -> list[str]:
         splits = (split,) if split else SPLIT_NAMES

@@ -55,6 +55,10 @@ class Le2iImporter:
                     events=events,
                     frames=frames,
                     attributes={"camera_angle": "corner", "scene": scene, "subjects": "adult"},
+                    # The room and its fixed camera. Le2i has four, and
+                    # letting them straddle splits is what made val_f1
+                    # reach 1.0 by epoch 3 on same-room recognition.
+                    split_group=scene,
                 )
             )
         return clips
