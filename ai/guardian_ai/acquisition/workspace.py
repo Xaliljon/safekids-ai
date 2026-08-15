@@ -9,6 +9,7 @@
       annotations/<clip>.json Guardian Video Annotation v1
       metadata/<clip>.json    per-clip provenance + lineage (source, camera angle…)
       metadata/review.json    review workflow state + audit history
+      metadata/split-pins.json  groups placed in a split by decision, with why
       taxonomy/taxonomy.json  the bound taxonomy snapshot
 
 Split assignment is the ADR-0010 hash function — stable, seedless,
@@ -37,6 +38,7 @@ ANNOTATIONS_DIR = "annotations"
 METADATA_DIR = "metadata"
 TAXONOMY_DIR = "taxonomy"
 TAXONOMY_FILE = "taxonomy.json"
+SPLIT_PINS_FILE = "split-pins.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,6 +160,8 @@ class DatasetWorkspace:
         split. Hashing the clip id instead is what let all four Le2i scenes
         appear in both train and val, and a validation set that shares its
         rooms with training cannot report generalization.
+
+        A group pinned by ``pin_split_group`` overrides the hash.
         """
         if clip_id != annotation.clip_id:
             raise AcquisitionError(
@@ -169,13 +173,90 @@ class DatasetWorkspace:
         video_source.replace(destination)
         save_annotation(annotation, self.annotation_path(clip_id))
         _write_json(self.metadata_path(clip_id), metadata)
-        split = assign_split(split_group or clip_id)
+        pinned = self.split_pins().get(split_group) if split_group is not None else None
+        split = pinned or assign_split(split_group or clip_id)
         entry: dict[str, Any] = {"clip_id": clip_id}
         if split_group is not None:
             entry["split_group"] = split_group
         with (self.root / split / SPLIT_FILE).open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
         return split
+
+    # ---------------------------------------------------------- split pins
+
+    def split_pins(self) -> dict[str, str]:
+        """Groups placed in a named split by decision rather than by hash."""
+        path = self.root / METADATA_DIR / SPLIT_PINS_FILE
+        if not path.is_file():
+            return {}
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return {str(group): str(split) for group, split in raw.get("pins", {}).items()}
+
+    def pin_split_group(self, group: str, split: str, *, reason: str, by: str) -> list[str]:
+        """Place a whole group in one split, deliberately. Returns moved clips.
+
+        Hash assignment is right for material that should be spread: it is
+        seedless, reproducible, and stable as a dataset grows. It is wrong
+        for a corpus whose *point* is to be unseen. Holding UR Fall entirely
+        out as test is not a split, it is an experiment design — a different
+        laboratory, different room, different subjects — and letting a hash
+        decide whether that corpus lands in training would throw away the
+        only generalization measurement available.
+
+        So the exception exists, and it is recorded: who pinned it, why, and
+        when. An unexplained pin is indistinguishable from a mistake, and
+        the next person reading a suspiciously good number needs to be able
+        to tell those apart.
+
+        Pinning is idempotent in effect and safe after import — split
+        membership is a metadata list, so already-registered clips of the
+        group are moved.
+        """
+        if split not in SPLIT_NAMES:
+            raise AcquisitionError(f"unknown split '{split}' (expected one of {SPLIT_NAMES})")
+        if not group.strip():
+            raise AcquisitionError("split group must not be empty")
+        if not reason.strip() or not by.strip():
+            raise AcquisitionError(
+                "pinning a group needs a reason and a person — an unexplained "
+                "pin cannot be told apart from a mistake"
+            )
+        path = self.root / METADATA_DIR / SPLIT_PINS_FILE
+        raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        pins = dict(raw.get("pins", {}))
+        history = list(raw.get("history", []))
+        pins[group] = split
+        history.append({"group": group, "split": split, "reason": reason.strip(), "by": by.strip()})
+        _write_json(path, {"pins": pins, "history": history})
+        return self._move_group(group, split)
+
+    def _move_group(self, group: str, split: str) -> list[str]:
+        """Rewrite split membership for one group. Media never moves."""
+        moved: list[str] = []
+        # Every split key must exist before the loop: a clip moving into a
+        # split that comes later in SPLIT_NAMES would otherwise land in a
+        # key that has not been created yet.
+        entries: dict[str, list[dict[str, Any]]] = {name: [] for name in SPLIT_NAMES}
+        for name in SPLIT_NAMES:
+            path = self.root / name / SPLIT_FILE
+            if not path.is_file():
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                if entry.get("split_group") == group and name != split:
+                    moved.append(str(entry["clip_id"]))
+                    entries[split].append(entry)
+                else:
+                    entries[name].append(entry)
+        if not moved:
+            return moved
+        for name in SPLIT_NAMES:
+            (self.root / name / SPLIT_FILE).write_text(
+                "".join(json.dumps(entry) + "\n" for entry in entries[name]), encoding="utf-8"
+            )
+        return moved
 
     def split_groups(self, split: str | None = None) -> dict[str, str]:
         """Group key per clip id, for clips whose importer declared one."""

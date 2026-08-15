@@ -73,6 +73,26 @@ def cmd_fetch(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_pin_split(arguments: argparse.Namespace) -> int:
+    workspace = DatasetWorkspace.open(Path(arguments.workspace))
+    moved = workspace.pin_split_group(
+        arguments.group, arguments.split, reason=arguments.reason, by=arguments.by
+    )
+    _print(
+        {
+            "group": arguments.group,
+            "split": arguments.split,
+            "moved_clips": len(moved),
+            "pins": workspace.split_pins(),
+            "note": (
+                "hash assignment still governs every unpinned group; this "
+                "exception is recorded in metadata/split-pins.json with its reason"
+            ),
+        }
+    )
+    return 0
+
+
 def cmd_import(arguments: argparse.Namespace) -> int:
     importer = get_importer(arguments.source)
     workspace = _open_or_create_workspace(arguments)
@@ -230,6 +250,16 @@ def build_parser() -> argparse.ArgumentParser:
     pilot.add_argument("--evidence", required=True, help="decrypted evidence export dir")
     _add_workspace_creation(pilot)
     pilot.set_defaults(handler=cmd_import_pilot)
+
+    pin = commands.add_parser(
+        "pin-split", help="place a whole split group in one split, deliberately"
+    )
+    pin.add_argument("--workspace", required=True)
+    pin.add_argument("--group", required=True, help="split group (scene, subject, corpus)")
+    pin.add_argument("--split", required=True, choices=["train", "val", "test"])
+    pin.add_argument("--reason", required=True, help="why this group is not hashed")
+    pin.add_argument("--by", required=True, help="who decided")
+    pin.set_defaults(handler=cmd_pin_split)
 
     annotate = commands.add_parser("annotate", help="open the local annotation editor")
     annotate.add_argument("--workspace", required=True)

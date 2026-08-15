@@ -61,6 +61,13 @@ def compute_statistics(workspace: DatasetWorkspace) -> dict[str, Any]:
         "average_clip_duration_s": _mean(clip_durations),
         "average_fall_duration_s": _mean(fall_durations),
         "splits": split_sizes,
+        # Which groups sit where, and which of those were placed by
+        # decision rather than by hash. A held-out corpus makes the test
+        # number mean something quite different, and a reader comparing
+        # two reports has no way to know unless it says so here.
+        "split_groups": sorted(set(workspace.split_groups().values())),
+        "split_pins": workspace.split_pins(),
+        "straddling_groups": workspace.straddling_groups(),
         "box_labels": dict(box_labels),
         "event_labels": dict(event_labels),
         "class_balance": {

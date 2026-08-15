@@ -93,6 +93,32 @@ clips and lets a model memorize instead of learn:
 | UR Fall | the whole corpus | one laboratory, one camera, and the public labels do not identify subjects — kept whole it is a genuine held-out domain |
 | GMDCSA24 | the subject | four subjects, each filmed in their own home |
 
+### Pinning a group to a split
+
+Hash assignment is right for material that should be spread: seedless,
+reproducible, stable as a dataset grows. It is wrong for a corpus whose
+*point* is to be unseen. Holding UR Fall entirely out as test is not a
+split — it is an experiment design, a different laboratory with different
+rooms and subjects — and letting a hash decide whether it lands in training
+would discard the only generalization measurement available.
+
+```bash
+python -m guardian_ai.dataset pin-split --workspace ws \
+  --group urfall --split test \
+  --reason "held-out domain: different lab, room and subjects" --by "Lead Architect"
+```
+
+The pin is recorded in `metadata/split-pins.json` with who decided and why,
+and refused without both — an unexplained pin cannot be told apart from a
+mistake, and the next person reading a suspiciously good number needs to
+tell those apart. Pinning works before or after import: split membership is
+a metadata list, so existing clips of the group are moved and the media
+never does. Every unpinned group still hashes.
+
+Pins and the group inventory appear in `statistics` and in the training
+export's `metadata.json`, so a Colab run can see how its test split was
+composed without opening the workspace.
+
 `None` falls back to the clip id, which is only correct when every clip is
 genuinely independent. `workspace.straddling_groups()` returns any group
 appearing in more than one split; it should always be empty, and one test

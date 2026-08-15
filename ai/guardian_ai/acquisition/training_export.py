@@ -92,6 +92,9 @@ def export_training_ready(workspace: DatasetWorkspace, destination: Path) -> dic
         "classes": CLASS_NAMES,
         "images": counts,
         "license": manifest.license,
+        # Carried into the training bundle so a Colab run can see how
+        # its test split was composed without opening the workspace.
+        "split_pins": workspace.split_pins(),
     }
     (destination / "metadata.json").write_text(json.dumps(summary, indent=2), "utf-8")
     return summary
