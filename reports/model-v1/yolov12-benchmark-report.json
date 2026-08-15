@@ -1,0 +1,149 @@
+{
+  "sprint": "21",
+  "title": "YOLOv12 benchmark and evaluation",
+  "classification": "E_INTEGRATION_BLOCKED",
+  "stopped_at": "section_3_license_audit",
+  "stop_authority": "Sprint 21 §3 — 'If YOLOv12 cannot legally be integrated under the current policy: STOP the integration and report the blocker.'",
+  "audit_date": "2026-08-15",
+  "summary": "The official YOLOv12 implementation is AGPL-3.0 and is a fork of Ultralytics that installs as the 'ultralytics' package. The model is the framework, so unlike a dependency it cannot be swapped out. ADR-0003 already blocks yolov8 and yolo11 on this licence; YOLOv12 is the same blocker with one fewer escape route. No YOLOv12 code entered the repository and no benchmark was produced.",
+  "source": {
+    "implementation": "https://github.com/sunsmarterjie/yolov12",
+    "branch_audited": "main",
+    "paper": "Tian, Ye & Doermann — YOLOv12: Attention-Centric Real-Time Object Detectors, arXiv:2502.12524 (2025-02-19)",
+    "installs_as_package": "ultralytics",
+    "upstream": "https://github.com/ultralytics/ultralytics",
+    "pypi_yolov12": "does not exist (404)",
+    "commit_pinned": null,
+    "checkpoint_sha256": null,
+    "checkpoint_downloaded": false
+  },
+  "license_analysis": {
+    "verdict": "INCOMPATIBLE",
+    "governing_adr": "ADR-0003",
+    "findings": [
+      {"artifact": "sunsmarterjie/yolov12 LICENSE", "license": "AGPL-3.0", "method": "fetched"},
+      {"artifact": "sunsmarterjie/yolov12 pyproject.toml", "license": "AGPL-3.0", "note": "declares name = \"ultralytics\"", "method": "fetched"},
+      {"artifact": "ultralytics/ultralytics LICENSE", "license": "AGPL-3.0", "method": "fetched"},
+      {"artifact": "ultralytics on PyPI", "license": "AGPL-3.0", "method": "package metadata"},
+      {"artifact": "pretrained weights", "license": "AGPL-3.0", "note": "published from the same repository under the same terms"}
+    ],
+    "dependencies_permissive": ["torch", "torchvision", "timm", "albumentations", "flash_attn", "onnx", "onnxruntime", "onnxslim", "pycocotools"],
+    "dependency_tree_is_the_blocker": false,
+    "reason": "Guardian ships a commercial product; AGPL-3.0 §13 reaches a deployed service. The usual mitigation of keeping the model and replacing the framework does not apply because the implementation is Ultralytics itself."
+  },
+  "guardian_gates": {
+    "detector_family": {
+      "call": "get_family('yolov12')",
+      "result": "TrainingConfigurationError",
+      "message_contains": ["license-blocked", "AGPL-3.0", "ADR-0003", "ultralytics", "yolov12-evaluation.md"],
+      "changed_this_sprint": true,
+      "change": "registered in the reserved table with its reason; previously failed as a generic 'unknown detector family'"
+    },
+    "export_compatibility": {
+      "allowed_licenses": ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "MIT", "Proprietary-GuardianAI"],
+      "agpl_allowed": false,
+      "changed_this_sprint": false
+    },
+    "edge_license_policy": {
+      "behaviour": "refuses an AGPL manifest at model load (ADR-0009)",
+      "changed_this_sprint": false
+    }
+  },
+  "not_performed": {
+    "adapter_implementation": "no YOLOv12 code was written",
+    "checkpoint_download": "none",
+    "training": "none",
+    "evaluation": "none",
+    "error_analysis": "none",
+    "pytorch_benchmark": "none",
+    "onnx_export": "none",
+    "onnx_parity": "none",
+    "edge_benchmark": "none",
+    "memory_measurement": "none",
+    "promotion_gate": "not run — the gate compares two evaluated models and there is only one",
+    "reason": "Measuring a model that cannot ship spends GPU budget on a number that changes no decision, and would leave AGPL code in the tree while doing it."
+  },
+  "dataset": {
+    "name": "guardian-fall-detection-v1",
+    "version": "1.0.0",
+    "modified": false,
+    "resplit": false,
+    "read_by_this_sprint": false
+  },
+  "guardian_v1_baseline": {
+    "source": "Sprint 20.2 measurements, not re-run for this sprint",
+    "input_size": 640,
+    "measurement_class": "development",
+    "is_edge_target": false,
+    "host": "Apple M4 Max",
+    "precision": 0.9902,
+    "recall": 0.9832,
+    "f1": 0.9867,
+    "map50": 0.2442,
+    "map50_95": 0.1399,
+    "false_positives": 36,
+    "false_negatives": 62,
+    "size_mb": 19.463,
+    "latency_mean_ms": 35.51,
+    "latency_p95_ms": 39.82,
+    "memory_mb": 73.58,
+    "sprint_20_2_allowance_ms": 111.462,
+    "caveats": [
+      "Precision and recall describe four rooms, not generalization: every validation scene is also a training scene (candidate provenance review). The scene-leakage defect is fixed for future imports; this published version predates it and is immutable.",
+      "Latency is development hardware. The 111.462 ms allowance is a Colab CPU figure and 35.51 ms is Apple M4 Max. Neither is a Jetson."
+    ]
+  },
+  "decision_matrix": {
+    "precision": {"guardian_v1": 0.9902, "yolov12": null, "winner": null},
+    "recall": {"guardian_v1": 0.9832, "yolov12": null, "winner": null},
+    "f1": {"guardian_v1": 0.9867, "yolov12": null, "winner": null},
+    "map50": {"guardian_v1": 0.2442, "yolov12": null, "winner": null},
+    "map50_95": {"guardian_v1": 0.1399, "yolov12": null, "winner": null},
+    "false_positives": {"guardian_v1": 36, "yolov12": null, "winner": null},
+    "false_negatives": {"guardian_v1": 62, "yolov12": null, "winner": null},
+    "latency_mean_ms": {"guardian_v1": 35.51, "yolov12": null, "winner": null},
+    "latency_p95_ms": {"guardian_v1": 39.82, "yolov12": null, "winner": null},
+    "size_mb": {"guardian_v1": 19.463, "yolov12": null, "winner": null},
+    "memory_mb": {"guardian_v1": 73.58, "yolov12": null, "winner": null},
+    "license": {"guardian_v1": "Apache-2.0", "yolov12": "AGPL-3.0", "winner": "guardian_v1"}
+  },
+  "promotion_eligibility": {
+    "yolov12": "INELIGIBLE",
+    "basis": "licence, not measured merit — it cannot be exported, loaded or shipped under ADR-0003"
+  },
+  "unblocking_paths": [
+    {
+      "path": "Ultralytics Enterprise Licence",
+      "realism": "available today",
+      "cost": "commercial contract",
+      "requires": "an ADR — it changes ADR-0003's premise"
+    },
+    {
+      "path": "permissively-licensed independent implementation",
+      "realism": "none exists publicly for YOLOv12",
+      "note": "Architectures are not themselves copyrightable, so a clean-room implementation is legally plausible. Sprint 19 already tried writing Guardian's own detector: the audit found it could not converge objectness on a single overfit example while the official implementation converged cleanly on the same one. That is measured evidence, in this repository, that this path costs more than it looks like."
+    },
+    {
+      "path": "accept AGPL",
+      "realism": "not a path",
+      "note": "AGPL §13 reaches a deployed service and Guardian ships commercially to kindergartens. ADR-0003 decided this."
+    }
+  ],
+  "recommendation": {
+    "primary": "Do not integrate YOLOv12 under the current policy. Close Sprint 21 at the blocker.",
+    "if_pursuing_accuracy": "Evaluate RT-DETR instead — already reserved in the family table as Apache-2.0 and scheduled after YOLOX. It answers the same underlying question ('is there a better detector than YOLOX-tiny') with no licence purchase and no blocker. It costs a sprint rather than a contract.",
+    "ordering": "The YOLOv12 decision is commercial before it is technical. Price the enterprise licence first; benchmarking after a licence is a defensible experiment, integrating first and resolving the licence later is not."
+  },
+  "limitations": [
+    "Licence texts were read from main on 2026-08-15; licences change and a re-audit should precede any future attempt.",
+    "This is an engineering reading of published licence files, not legal advice.",
+    "No claim is made about YOLOv12's technical merit. It may well be better than YOLOX-tiny; this sprint does not know, and nothing here should be cited as evidence either way.",
+    "The audit covered the official implementation and its upstream. A permissively-licensed third-party implementation could exist and was not found."
+  ],
+  "reproduce": [
+    "curl -sSL https://raw.githubusercontent.com/sunsmarterjie/yolov12/main/LICENSE | head -3",
+    "curl -sSL https://raw.githubusercontent.com/sunsmarterjie/yolov12/main/pyproject.toml | grep -E '^name|license'",
+    "curl -sSL https://raw.githubusercontent.com/ultralytics/ultralytics/main/LICENSE | head -3",
+    "python -c \"from guardian_ai.training.families import get_family; get_family('yolov12')\""
+  ]
+}

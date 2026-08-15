@@ -151,8 +151,9 @@ regardless of which family produced it.
 ## How to add another detector (RT-DETR, YOLOv8, YOLO11, YOLO12)
 
 1. Confirm the license (ADR-0003) — RT-DETR is Apache-2.0 and already
-   reserved for this; YOLOv8/YOLO11 stay AGPL-blocked until a compliant
-   path exists; evaluate YOLO12 the same way before starting.
+   reserved for this; YOLOv8/YOLO11/YOLOv12 stay AGPL-blocked until a
+   compliant path exists. **Step 1 is a gate, not a formality**: Sprint 21
+   ran it for YOLOv12 and the sprint ended there. See below.
 2. Add the real package as a workspace dependency, pinned to a commit or
    release (never a fork).
 3. Create `guardian_ai/training/detectors/<vendor>/` with the same five
@@ -165,6 +166,31 @@ regardless of which family produced it.
 5. Prove convergence the same way this sprint did: overfit a single real
    example and confirm the decoded prediction lands on the real box
    before trusting a full training run's numbers.
+
+### YOLOv12 — audited and blocked (Sprint 21)
+
+Sprint 21 set out to benchmark YOLOv12 against Guardian v1 and stopped at
+step 1. The full audit is `architecture/yolov12-evaluation.md`; the report
+is `reports/model-v1/yolov12-benchmark-report.md`. Two facts matter for
+anyone reading this list later.
+
+**The licence is AGPL-3.0**, like YOLOv8 and YOLO11 — but with one fewer way
+out. The official implementation (`sunsmarterjie/yolov12`) is a fork of
+Ultralytics whose `pyproject.toml` declares `name = "ultralytics"`. It is
+not a model with an AGPL dependency that could be swapped for a permissive
+runtime; the model *is* the framework, so there is no weights-only path.
+
+**Step 2 excludes it independently.** "Pinned to a commit or release (never
+a fork)" — YOLOv12's official implementation *is* a fork of another
+project's package, published under that package's name. Even with the
+licence resolved, integrating it as written would violate the rule that
+exists so Guardian never depends on someone's patched copy of someone
+else's detector.
+
+`get_family("yolov12")` now refuses with the reason rather than an unknown-
+family error, so this finding is where the next person will meet it. Nothing
+here says YOLOv12 is technically worse than YOLOX — it was never measured,
+and that stays true until the licence question has an answer.
 
 ## Consequences
 

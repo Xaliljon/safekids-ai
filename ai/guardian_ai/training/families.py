@@ -19,8 +19,12 @@ Families in v1:
   not even converge objectness on a single overfit example, while the
   official implementation converges cleanly on the same example — that
   finding is why the custom implementation was removed rather than fixed.
-- ``yolov8`` / ``yolo11`` — RESERVED and additionally license-blocked
-  (AGPL, ADR-0003) until a compliant implementation path is approved.
+- ``yolov8`` / ``yolo11`` / ``yolov12`` — RESERVED and additionally
+  license-blocked (AGPL, ADR-0003) until a compliant implementation path is
+  approved. Sprint 21 audited YOLOv12 specifically and stopped before
+  integration: its official implementation is a fork of Ultralytics
+  published under the same name and the same AGPL-3.0 terms, so unlike a
+  dependency it cannot be swapped out.
 - ``rt-detr`` — RESERVED (Apache-2.0; scheduled after YOLOX).
 """
 
@@ -87,6 +91,12 @@ _FAMILIES: dict[str, Callable[[], DetectorFamily]] = {}
 _RESERVED: dict[str, str] = {
     "yolov8": "license-blocked (AGPL-3.0, ADR-0003) — no compliant path approved yet",
     "yolo11": "license-blocked (AGPL-3.0, ADR-0003) — no compliant path approved yet",
+    "yolov12": (
+        "license-blocked (AGPL-3.0, ADR-0003) — the official implementation "
+        "(sunsmarterjie/yolov12) is a fork of Ultralytics that installs as the "
+        "'ultralytics' package; the model is the framework, so there is no "
+        "weights-only path. See architecture/yolov12-evaluation.md (Sprint 21)"
+    ),
     "rt-detr": "reserved (Apache-2.0); scheduled after YOLOX-tiny lands",
 }
 

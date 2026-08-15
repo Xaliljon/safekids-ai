@@ -86,3 +86,39 @@ def test_family_metadata_matches_export_contract() -> None:
     assert metadata["output_name"] == "output"
     assert metadata["input_shape"] == [1, 3, 96, 96]
     assert metadata["license"] == "Proprietary-GuardianAI"
+
+
+# ------------------------------------------------- Sprint 21: YOLOv12 audit
+
+
+def test_yolov12_is_license_blocked_with_its_reason() -> None:
+    """Sprint 21 audited YOLOv12 and stopped before integration.
+
+    The refusal must name the reason, not just the absence. A generic
+    "unknown family" invites the next engineer to add it; the AGPL finding
+    is what stops that, so it has to be where they will hit it.
+    """
+    with pytest.raises(TrainingConfigurationError, match="AGPL-3.0") as caught:
+        get_family("yolov12")
+    message = str(caught.value)
+    assert "ultralytics" in message
+    assert "yolov12-evaluation.md" in message
+
+
+def test_yolov12_is_not_a_trainable_family() -> None:
+    assert "yolov12" not in available_families()
+
+
+@pytest.mark.parametrize("family", ["yolov8", "yolo11", "yolov12"])
+def test_every_agpl_family_stays_blocked(family: str) -> None:
+    """One test per blocked family, so removing a block is a visible act."""
+    with pytest.raises(TrainingConfigurationError, match="license-blocked"):
+        get_family(family)
+
+
+def test_agpl_is_absent_from_the_on_device_allowlist() -> None:
+    """The second gate. Even a trained AGPL model could not be exported —
+    ADR-0003's refusal is structural, not procedural."""
+    from guardian_ai.export.compat import ALLOWED_LICENSES
+
+    assert "AGPL-3.0" not in ALLOWED_LICENSES
