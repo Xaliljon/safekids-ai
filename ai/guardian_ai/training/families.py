@@ -25,7 +25,11 @@ Families in v1:
   integration: its official implementation is a fork of Ultralytics
   published under the same name and the same AGPL-3.0 terms, so unlike a
   dependency it cannot be swapped out.
-- ``rt-detr`` — RESERVED (Apache-2.0; scheduled after YOLOX).
+- ``rtdetr-r18vd`` / ``rtdetr-r34vd`` / ``rtdetr-r50vd`` / ``rtdetr-r101vd``
+  — candidate families (Apache-2.0), backed by ``transformers``'
+  ``RTDetrForObjectDetection``. Sprint 22 integrated and audited them; they
+  are candidate-only and nothing is promoted. See
+  architecture/rtdetr-evaluation.md.
 """
 
 from __future__ import annotations
@@ -97,7 +101,10 @@ _RESERVED: dict[str, str] = {
         "'ultralytics' package; the model is the framework, so there is no "
         "weights-only path. See architecture/yolov12-evaluation.md (Sprint 21)"
     ),
-    "rt-detr": "reserved (Apache-2.0); scheduled after YOLOX-tiny lands",
+    "rt-detr": (
+        "not a family name — RT-DETR landed in Sprint 22 as "
+        "'rtdetr-r18vd' / 'rtdetr-r34vd' / 'rtdetr-r50vd' / 'rtdetr-r101vd'"
+    ),
 }
 
 
@@ -242,6 +249,24 @@ def _make_official_yolox(variant: str) -> Callable[[], DetectorFamily]:
 
 for _variant in ("nano", "tiny", "s", "m", "l"):
     register_family(f"yolox-{_variant}", _make_official_yolox(_variant))
+
+
+# ------------------------------------------------------- rt-detr (Sprint 22)
+
+
+def _make_rtdetr(variant: str) -> Callable[[], DetectorFamily]:
+    def factory() -> DetectorFamily:
+        # deferred import for the same reason as yolox: transformers is a
+        # large module tree and importing families.py must stay cheap.
+        from guardian_ai.training.detectors.rtdetr.family import RtDetrTrainer
+
+        return RtDetrTrainer(variant)
+
+    return factory
+
+
+for _rtdetr_variant in ("r18vd", "r34vd", "r50vd", "r101vd"):
+    register_family(f"rtdetr-{_rtdetr_variant}", _make_rtdetr(_rtdetr_variant))
 
 
 def family_metadata(family: DetectorFamily, num_classes: int, input_size: int) -> dict[str, Any]:

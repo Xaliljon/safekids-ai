@@ -167,6 +167,36 @@ regardless of which family produced it.
    example and confirm the decoded prediction lands on the real box
    before trusting a full training run's numbers.
 
+### RT-DETR — integrated as a candidate (Sprint 22)
+
+RT-DETR is the first family added by following this list end to end, and it
+is worth recording which steps did real work.
+
+**Step 1 (licence) chose the implementation, not just approved it.** Three
+permissive RT-DETRs exist — the paper authors' `lyuwenyu/RT-DETR`, Paddle's
+original, and `transformers` — all Apache-2.0, plus an AGPL one inside
+Ultralytics that must never be used. `transformers` was selected because
+`lyuwenyu/RT-DETR` ships no `setup.py` and no `pyproject.toml`: it is
+research code, not a package, so depending on it would mean vendoring a copy
+— which is what step 2's "never a fork" exists to prevent.
+
+**Step 3 needed no new pattern.** RT-DETR computes its loss inside its own
+forward pass, exactly like YOLOX, so `RtDetrWrapper` bridges it the same way
+`OfficialYoloxWrapper` does. The `DetectorFamily` protocol was not changed.
+
+**Step 5 earned its place.** The adapter looked broken at 120 overfit steps
+(box at `[0.83, 0.87]` against a target of `[0.5, 0.5]`) and converged
+cleanly by step 300 (`[0.497, 0.499, 0.200, 0.399]`, score 0.982). DETR-style
+models converge slowly from random init; stopping early would have produced
+a confident wrong answer in either direction.
+
+Two architectural differences are disclosed rather than hidden: RT-DETR runs
+**no NMS** (one-to-one Hungarian matching suppresses duplicates in the loss),
+and its boxes are **already normalized** (copying YOLOX's divide-by-input_size
+would shrink every box to nothing). Both are pinned by tests.
+
+Full audit: `architecture/rtdetr-evaluation.md`.
+
 ### YOLOv12 — audited and blocked (Sprint 21)
 
 Sprint 21 set out to benchmark YOLOv12 against Guardian v1 and stopped at

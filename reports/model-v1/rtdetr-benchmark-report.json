@@ -1,0 +1,191 @@
+{
+  "sprint": "22",
+  "title": "RT-DETR benchmark and evaluation",
+  "classification": "D_NO_MEANINGFUL_IMPROVEMENT_DEMONSTRATED",
+  "classification_note": "The A-F categories assume both models were measured on both axes; accuracy was not measured here. D is the nearest honest fit: on every axis actually measured Guardian v1 wins and nothing demonstrates an improvement. Not E (integration succeeded), not B or F (no accuracy claim can be made), not C (RT-DETR is slower, not faster).",
+  "audit_date": "2026-08-15",
+  "status": "CANDIDATE_ONLY",
+  "deployed": false,
+  "production_config_changed": false,
+  "summary": "Licence gate passed cleanly (Apache-2.0 via transformers). The adapter integrates behind DetectorFamily without changing the protocol, exports to ONNX through Guardian's own parity gate, and converges on a single overfit example. At matched 640 input, same runtime and same host, RT-DETR r18vd runs at 473.42 ms mean against Guardian v1's 35.51 ms — 13.3x, and 4.2x over Sprint 20.2's 111.462 ms allowance. Accuracy is unmeasured: the Guardian dataset is not on this machine and there is no CUDA GPU.",
+  "license_audit": {
+    "verdict": "COMPLIANT",
+    "governing_adr": "ADR-0003",
+    "selected": "huggingface/transformers RTDetrForObjectDetection",
+    "selection_reason": "lyuwenyu/RT-DETR is Apache-2.0 but ships no setup.py and no pyproject.toml (both 404) — research code, not a package, so depending on it means vendoring a copy, which detector-integration.md step 2 ('never a fork') exists to prevent. transformers is the only packaged permissive RT-DETR.",
+    "candidates": [
+      {"implementation": "lyuwenyu/RT-DETR", "license": "Apache-2.0", "packaged": false, "verdict": "compliant, not packaged"},
+      {"implementation": "PaddlePaddle/PaddleDetection", "license": "Apache-2.0", "packaged": true, "verdict": "compliant"},
+      {"implementation": "huggingface/transformers", "license": "Apache-2.0", "packaged": true, "verdict": "SELECTED"},
+      {"implementation": "ultralytics RTDETR", "license": "AGPL-3.0", "packaged": true, "verdict": "MUST NEVER BE USED"}
+    ],
+    "weights": [
+      {"model_id": "PekingU/rtdetr_r18vd", "license": "apache-2.0"},
+      {"model_id": "PekingU/rtdetr_r50vd", "license": "apache-2.0"}
+    ],
+    "trap": "RT-DETR also ships inside Ultralytics. 'from ultralytics import RTDETR' would reintroduce Sprint 21's blocker under a name that looks approved; a test asserts the AGPL families stay blocked."
+  },
+  "source": {
+    "package": "transformers",
+    "package_version": "5.15.0",
+    "package_license": "Apache-2.0",
+    "class": "RTDetrForObjectDetection",
+    "variant_benchmarked": "r18vd",
+    "variant_reason": "smallest viable (Sprint 22 §17); larger variants are slower and would reach the same conclusion",
+    "parameters_millions": 20.07,
+    "input_resolution": 640,
+    "checkpoint_sha256": null,
+    "pretrained_weights_downloaded": false
+  },
+  "integration": {
+    "protocol_changed": false,
+    "package": "guardian_ai/training/detectors/rtdetr/",
+    "families_registered": ["rtdetr-r18vd", "rtdetr-r34vd", "rtdetr-r50vd", "rtdetr-r101vd"],
+    "wrapper_pattern": "identical to OfficialYoloxWrapper — cache images in forward, run the gradient-carrying pass in compute_loss; one extra forward per training step",
+    "disclosed_differences": [
+      {"difference": "no NMS", "reason": "one-to-one Hungarian matching suppresses duplicates in the loss; running NMS anyway would move the YOLOX comparison in one direction or the other for no principled reason"},
+      {"difference": "boxes already normalized", "reason": "RT-DETR predicts in [0,1]; copying the YOLOX family's divide-by-input_size would shrink every box to nothing"}
+    ]
+  },
+  "convergence_proof": {
+    "method": "detector-integration.md step 5 — overfit one 320x320 image with one box at [0.5, 0.5, 0.2, 0.4], random init, AdamW lr=1e-4",
+    "converged": true,
+    "steps": [
+      {"step": 0, "loss": 610.674, "box": [0.975, 0.975, 0.1, 0.1], "score": 0.628},
+      {"step": 100, "loss": 19.765, "box": [0.509, 0.194, 0.198, 0.46], "score": 0.057},
+      {"step": 200, "loss": 14.16, "box": [0.51, 0.476, 0.207, 0.45], "score": 0.43},
+      {"step": 300, "loss": 12.204, "box": [0.497, 0.499, 0.2, 0.399], "score": 0.982},
+      {"step": 800, "loss": 10.446, "box": [0.5, 0.502, 0.2, 0.403], "score": 0.986}
+    ],
+    "honest_note": "A first attempt stopped at 120 steps with the box at [0.829, 0.865] and looked like a defect. It was under-training — DETR-style models converge slowly from random init — and stopping there would have produced a confident wrong answer."
+  },
+  "onnx_export": {
+    "passed": true,
+    "mechanism": "guardian_ai.export.onnx_export.export_onnx (unchanged)",
+    "structural_check": "pass",
+    "parity_check": "pass",
+    "parity_tolerance_changed": false,
+    "sha256_prefix": "72e051d80e654e4e",
+    "size_mb": 76.343,
+    "fp16_attempted": false
+  },
+  "benchmark": {
+    "methodology": "Sprint 20.2, unchanged: runs=150, warmup=20, CPU execution provider, input 1x3x640x640",
+    "measurement_class": "development",
+    "is_edge_target": false,
+    "host": {
+      "cpu": "Apple M4 Max (10 performance + 4 efficiency cores)",
+      "ram_gb": 36,
+      "os": "macOS 26.3 arm64",
+      "onnxruntime": "1.27.0",
+      "torch": "2.12.1",
+      "execution_provider": "CPUExecutionProvider"
+    },
+    "onnx": {
+      "latency_ms_mean": 473.42,
+      "latency_ms_p95": 1543.209,
+      "memory_mb": 718.08,
+      "size_mb": 76.343,
+      "fps": 2.11
+    },
+    "pytorch": {
+      "latency_ms_mean": 127.677,
+      "latency_ms_p50": 66.767,
+      "latency_ms_p95": 314.289,
+      "fps": 7.83
+    },
+    "anomaly": "ONNX is 3.7x slower than PyTorch for the same model, which is backwards from the usual result. The likely cause is an unfused attention graph in the export. 473.42 ms should not be treated as RT-DETR's floor."
+  },
+  "guardian_v1_baseline": {
+    "source": "Sprint 20.2 measurements, not re-run",
+    "input_size": 640,
+    "runtime": "onnxruntime CPU EP",
+    "host": "Apple M4 Max",
+    "precision": 0.9902,
+    "recall": 0.9832,
+    "f1": 0.9867,
+    "map50": 0.2442,
+    "map50_95": 0.1399,
+    "false_positives": 36,
+    "false_negatives": 62,
+    "size_mb": 19.463,
+    "latency_mean_ms": 35.51,
+    "latency_p95_ms": 39.82,
+    "fps": 28.2,
+    "memory_mb": 73.58,
+    "memory_caveat": "measured on the Colab CPU EP run, not this host — not a like-for-like comparison and must not be used as a ratio",
+    "standing_caveats": [
+      "Precision and recall describe four rooms rather than generalization (scene leakage, candidate provenance review).",
+      "Latency is development hardware, not a Jetson."
+    ]
+  },
+  "comparison": {
+    "conditions": "both at 640 input, ONNX Runtime CPU EP, Apple M4 Max — ADR-0020's mismatched-shape refusal does not apply",
+    "latency_ratio_onnx": 13.33,
+    "sprint_20_2_allowance_ms": 111.462,
+    "over_allowance_factor": 4.25,
+    "size_ratio": 3.92,
+    "parameter_ratio": 4.01
+  },
+  "decision_matrix": {
+    "precision": {"guardian_v1": 0.9902, "rtdetr_r18vd": null, "winner": null},
+    "recall": {"guardian_v1": 0.9832, "rtdetr_r18vd": null, "winner": null},
+    "f1": {"guardian_v1": 0.9867, "rtdetr_r18vd": null, "winner": null},
+    "map50": {"guardian_v1": 0.2442, "rtdetr_r18vd": null, "winner": null},
+    "map50_95": {"guardian_v1": 0.1399, "rtdetr_r18vd": null, "winner": null},
+    "false_positives": {"guardian_v1": 36, "rtdetr_r18vd": null, "winner": null},
+    "false_negatives": {"guardian_v1": 62, "rtdetr_r18vd": null, "winner": null},
+    "latency_mean_ms": {"guardian_v1": 35.51, "rtdetr_r18vd": 473.42, "winner": "guardian_v1"},
+    "latency_p95_ms": {"guardian_v1": 39.82, "rtdetr_r18vd": 1543.209, "winner": "guardian_v1"},
+    "fps": {"guardian_v1": 28.2, "rtdetr_r18vd": 2.11, "winner": "guardian_v1"},
+    "size_mb": {"guardian_v1": 19.463, "rtdetr_r18vd": 76.343, "winner": "guardian_v1"},
+    "memory_mb": {"guardian_v1": 73.58, "rtdetr_r18vd": 718.08, "winner": "guardian_v1"},
+    "license": {"guardian_v1": "Apache-2.0", "rtdetr_r18vd": "Apache-2.0", "winner": "tie"}
+  },
+  "promotion_gate": {
+    "run": false,
+    "reason": "the gate compares two evaluated models and RT-DETR has no evaluation",
+    "latency_outcome_if_run": "REJECT — 473.42 ms against a 35.51 ms baseline is 13.3x, far past the gate's 20% slack",
+    "eligibility": "TECHNICALLY_INELIGIBLE on measured evidence; candidate-only regardless"
+  },
+  "seven_questions": {
+    "legally_compatible": "yes — Apache-2.0 end to end via transformers",
+    "technically_compatible": "yes — integrates behind DetectorFamily unchanged, exports to ONNX, passes the parity gate, converges on an overfit example",
+    "more_accurate": "unknown — not measured",
+    "faster": "no — 13.3x slower at matched input, same runtime, same host",
+    "more_memory_efficient": "no — 718 MB vs 73.58 MB (not like-for-like; directionally clear)",
+    "passes_promotion_gate": "not run; on latency alone it would not",
+    "improvement_justifies_replacement": "no, on current evidence"
+  },
+  "not_performed": {
+    "training": "the Guardian dataset is not on this machine (ai/training/datasets/ is empty) and there is no CUDA GPU",
+    "accuracy_evaluation": "requires a trained model on the real test split",
+    "error_analysis": "requires predictions",
+    "qualitative_images": "requires predictions",
+    "promotion_gate": "requires two evaluated models",
+    "fp16_export": "not attempted",
+    "larger_variants": "r34vd/r50vd/r101vd are larger than the benchmarked r18vd and would reach the same latency conclusion"
+  },
+  "limitations": [
+    "The Guardian dataset is not on this machine and there is no CUDA GPU; training and accuracy need the Sprint 20.1 Colab workflow.",
+    "Benchmarked weights are randomly initialised. Latency depends on architecture and tensor shapes rather than weight values, so the timings are valid for cost and say nothing about accuracy.",
+    "The ONNX result is probably improvable — 3.7x slower than PyTorch is backwards and suggests an unoptimised export graph. Treating 473.42 ms as RT-DETR's floor would be unfair to it.",
+    "CPU is not the Edge target. A transformer detector may close much of this gap on a GPU; it would have to close more than an order of magnitude.",
+    "ai/training/configs/training.yaml still names the non-family 'rt-detr' and was deliberately left alone — changing a production training config is outside an evaluation sprint.",
+    "Licence texts were read on 2026-08-15. This is an engineering reading of published licence files, not legal advice."
+  ],
+  "recommendation": {
+    "primary": "Do not replace Guardian v1 with RT-DETR on this evidence. Keep it as a candidate; do not spend Colab budget training it until the latency question is settled on real hardware.",
+    "ordered_next_steps": [
+      "Fix the ONNX export path first — 3.7x slower than PyTorch is a defect in the export, not a property of the model, and every later number inherits it.",
+      "Then benchmark on the actual Edge target. ADR-0020 §3 already makes this a named blocker for the absolute budget clause; RT-DETR is the case that makes it urgent rather than tidy.",
+      "Only then train. Spending Colab budget on a model currently 13x outside its latency budget buys an accuracy number nobody can act on."
+    ]
+  },
+  "reproduce": [
+    "curl -sSL https://raw.githubusercontent.com/lyuwenyu/RT-DETR/main/LICENSE | head -3",
+    "curl -sSL -o /dev/null -w '%{http_code}\\n' https://raw.githubusercontent.com/lyuwenyu/RT-DETR/main/pyproject.toml",
+    "curl -sSL https://huggingface.co/api/models/PekingU/rtdetr_r18vd | grep -o 'license:[^\"]*'",
+    "python -m pytest ai/tests/test_rtdetr_family.py -q"
+  ]
+}

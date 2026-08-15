@@ -101,4 +101,5 @@ markers = [
     "hardware: requires Guardian Edge Box hardware (Jetson/N100)",
     "benchmark: performance measurement; requires locally installed models",
     "stress: long-running stability/stress simulations",
+    "network: downloads from an upstream host (model configs, checkpoints)",
 ]

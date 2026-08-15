@@ -38,8 +38,11 @@ def test_training_template_is_valid_but_gated(
     monkeypatch.setenv("GUARDIAN_DATASET_ROOT", str(tmp_path))
     raw = yaml.safe_load((TRAINING_DIR / "configs" / "training.yaml").read_text())
     config = config_from_dict(raw, source="training.yaml")
-    # rt-detr is scheduled after yolox-tiny; the reservation gate still fires loudly
-    with pytest.raises(TrainingConfigurationError, match="scheduled after YOLOX-tiny"):
+    # Sprint 22 landed RT-DETR as rtdetr-<variant>. The bare "rt-detr" in this
+    # template was never a family name and still is not; the template itself
+    # is deliberately left alone, since changing a production training config
+    # is outside an evaluation sprint.
+    with pytest.raises(TrainingConfigurationError, match="not a family name"):
         get_family(config.model.family)
 
 
