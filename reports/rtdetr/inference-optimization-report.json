@@ -1,0 +1,645 @@
+{
+  "sprint": "23",
+  "target_mean_ms": 111.462,
+  "methodology": "Sprint 20.2 profiling harness unchanged (warmup=20, runs=200); the baseline row uses compare.benchmark_onnx with runs=150 exactly as Sprint 22 did",
+  "harness_calibration": {
+    "config": "CPU ALL intra=2",
+    "mean_ms": 17.537,
+    "p50_ms": 17.397,
+    "p95_ms": 18.629,
+    "fps": 57.02,
+    "peak_rss_mb": 348.92,
+    "first_call_ms": 24.518,
+    "sprint_20_2_published_ms": 18.45
+  },
+  "sprint22_baseline_reproduction": {
+    "latency_ms_mean": 109.284,
+    "latency_ms_p95": 126.351,
+    "memory_mb": 616.61,
+    "size_mb": 76.343,
+    "input_shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "sprint22_published_mean_ms": 473.42,
+    "sprint22_published_p95_ms": 1543.209
+  },
+  "pytorch": {
+    "mean_ms": 66.079,
+    "p50_ms": 65.635,
+    "p95_ms": 69.521,
+    "fps": 15.13,
+    "torch": "2.12.1",
+    "threads": 10
+  },
+  "host": {
+    "platform": "macOS-26.3-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "processor": "Apple M4 Max",
+    "logical_cpus": 14,
+    "python": "3.14.6",
+    "onnxruntime": "1.27.0",
+    "available_providers": [
+      "CoreMLExecutionProvider",
+      "AzureExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "is_edge_target": false,
+    "measurement_class": "development"
+  },
+  "available_providers": [
+    "CoreMLExecutionProvider",
+    "AzureExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "graph_diagnosis": {
+    "rtdetr_r18vd": {
+      "nodes": 1944,
+      "opset": [
+        [
+          "ai.onnx",
+          17
+        ]
+      ],
+      "initializers": 137,
+      "inputs": [
+        [
+          "images",
+          [
+            1,
+            3,
+            640,
+            640
+          ]
+        ]
+      ],
+      "outputs": [
+        [
+          "output",
+          [
+            1,
+            300,
+            6
+          ]
+        ]
+      ],
+      "fully_static_io": true,
+      "op_histogram": {
+        "Constant": 579,
+        "Identity": 162,
+        "Add": 135,
+        "Mul": 122,
+        "Reshape": 86,
+        "Unsqueeze": 83,
+        "Concat": 70,
+        "Expand": 70,
+        "Conv": 69,
+        "MatMul": 67,
+        "Slice": 63,
+        "Shape": 51,
+        "ConstantOfShape": 50,
+        "Where": 49,
+        "Equal": 48,
+        "Transpose": 45,
+        "Relu": 33,
+        "Sigmoid": 33,
+        "Gather": 23,
+        "Div": 14,
+        "LayerNormalization": 12,
+        "ScatterND": 12,
+        "GridSample": 9,
+        "Clip": 9,
+        "Softmax": 7,
+        "Sub": 7,
+        "ReduceSum": 4,
+        "Log": 4,
+        "AveragePool": 3,
+        "Cast": 3,
+        "Einsum": 2,
+        "Sin": 2,
+        "Cos": 2,
+        "Resize": 2,
+        "Greater": 2,
+        "Not": 2,
+        "Tile": 2,
+        "GatherElements": 2,
+        "MaxPool": 1,
+        "Erf": 1,
+        "Less": 1,
+        "And": 1,
+        "ReduceMax": 1,
+        "TopK": 1
+      },
+      "shape_arithmetic_nodes": 303,
+      "layout_nodes": 347,
+      "constant_nodes": 579,
+      "identity_nodes": 162,
+      "matmul_nodes": 67,
+      "conv_nodes": 69,
+      "attention_fused": false,
+      "compute_nodes": 136,
+      "overhead_ratio": 4.78
+    },
+    "yolox_tiny_coco416": {
+      "nodes": 279,
+      "opset": [
+        [
+          "ai.onnx",
+          11
+        ]
+      ],
+      "initializers": 176,
+      "inputs": [
+        [
+          "images",
+          [
+            1,
+            3,
+            416,
+            416
+          ]
+        ]
+      ],
+      "outputs": [
+        [
+          "output",
+          [
+            1,
+            3549,
+            85
+          ]
+        ]
+      ],
+      "fully_static_io": true,
+      "op_histogram": {
+        "Conv": 83,
+        "Sigmoid": 80,
+        "Mul": 74,
+        "Concat": 18,
+        "Slice": 8,
+        "Add": 7,
+        "MaxPool": 3,
+        "Reshape": 3,
+        "Resize": 2,
+        "Transpose": 1
+      },
+      "shape_arithmetic_nodes": 0,
+      "layout_nodes": 30,
+      "constant_nodes": 0,
+      "identity_nodes": 0,
+      "matmul_nodes": 0,
+      "conv_nodes": 83,
+      "attention_fused": false,
+      "compute_nodes": 83,
+      "overhead_ratio": 0.36
+    }
+  },
+  "graph_optimization_levels": {
+    "disabled": {
+      "nodes": 1365,
+      "constant": 0,
+      "identity": 162,
+      "shape_arithmetic": 303,
+      "size_mb": 76.3,
+      "top": {
+        "Identity": 162,
+        "Add": 135,
+        "Mul": 122,
+        "Reshape": 86,
+        "Unsqueeze": 83,
+        "Concat": 70
+      }
+    },
+    "basic": {
+      "nodes": 631,
+      "constant": 0,
+      "identity": 0,
+      "shape_arithmetic": 11,
+      "size_mb": 76.64,
+      "top": {
+        "Reshape": 154,
+        "Conv": 69,
+        "Gemm": 55,
+        "Mul": 51,
+        "Add": 50,
+        "Transpose": 43
+      }
+    },
+    "extended": {
+      "nodes": 563,
+      "constant": 0,
+      "identity": 0,
+      "shape_arithmetic": 2,
+      "size_mb": 76.62,
+      "top": {
+        "Reshape": 154,
+        "Conv": 58,
+        "Gemm": 55,
+        "Transpose": 43,
+        "Add": 38,
+        "QuickGelu": 28
+      }
+    },
+    "all": {
+      "nodes": 589,
+      "constant": 0,
+      "identity": 0,
+      "shape_arithmetic": 2,
+      "size_mb": 76.63,
+      "top": {
+        "Reshape": 154,
+        "Transpose": 89,
+        "Gemm": 55,
+        "NhwcFusedConv": 33,
+        "QuickGelu": 28,
+        "Unsqueeze": 25
+      }
+    }
+  },
+  "latency_breakdown": {
+    "preprocess": {
+      "mean_ms": 0.392,
+      "p50_ms": 0.383,
+      "p95_ms": 0.422
+    },
+    "inference": {
+      "mean_ms": 95.871,
+      "p50_ms": 95.388,
+      "p95_ms": 98.821
+    },
+    "decode": {
+      "mean_ms": 0.071,
+      "p50_ms": 0.072,
+      "p95_ms": 0.086
+    },
+    "total": {
+      "mean_ms": 96.334
+    }
+  },
+  "parity": {
+    "cpu_all_intra2": {
+      "max_abs_delta": 1.1920928955078125e-06,
+      "within_export_tolerance_1e-4": true,
+      "max_box_delta": 0.0,
+      "max_score_delta": 1.1920928955078125e-06
+    },
+    "cpu_all_intra8": {
+      "max_abs_delta": 1.1920928955078125e-06,
+      "within_export_tolerance_1e-4": true,
+      "max_box_delta": 0.0,
+      "max_score_delta": 1.1920928955078125e-06
+    },
+    "coreml_all_intra4": {
+      "max_abs_delta": 0.987500011920929,
+      "within_export_tolerance_1e-4": false,
+      "max_box_delta": 0.987500011920929,
+      "max_score_delta": 0.4496961236000061
+    },
+    "coreml_default": {
+      "max_abs_delta": 0.987500011920929,
+      "within_1e-4": false
+    },
+    "coreml_cpu_only": {
+      "max_abs_delta": 1.4901161193847656e-06,
+      "within_1e-4": true
+    },
+    "coreml_cpu_and_gpu": {
+      "max_abs_delta": 0.9874899983406067,
+      "within_1e-4": false
+    },
+    "fp16_tooling": "not installed"
+  },
+  "matrix": [
+    {
+      "configuration": "CoreML ENABLE_ALL intra=4,inter=default",
+      "provider": "CoreMLExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 4,
+      "mean_ms": 34.221,
+      "p50_ms": 33.304,
+      "p95_ms": 37.931,
+      "fps": 29.22,
+      "first_call_ms": 43.418,
+      "max_abs_delta_vs_unoptimized": 0.987500011920929,
+      "parity_ok_1e-4": false,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CoreML ENABLE_ALL intra=2,inter=default",
+      "provider": "CoreMLExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 2,
+      "mean_ms": 40.902,
+      "p50_ms": 43.08,
+      "p95_ms": 45.126,
+      "fps": 24.45,
+      "first_call_ms": 50.332,
+      "max_abs_delta_vs_unoptimized": 0.987500011920929,
+      "parity_ok_1e-4": false,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CoreML(CPUOnly) ENABLE_ALL intra8",
+      "provider": "CoreMLExecutionProvider(MLComputeUnits=CPUOnly)",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 8,
+      "mean_ms": 81.685,
+      "p50_ms": 80.44,
+      "p95_ms": 87.574,
+      "fps": 12.24,
+      "first_call_ms": null,
+      "max_abs_delta_vs_unoptimized": 1.4901161193847656e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CoreML(CPUOnly) ENABLE_ALL intra2",
+      "provider": "CoreMLExecutionProvider(MLComputeUnits=CPUOnly)",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 2,
+      "mean_ms": 82.046,
+      "p50_ms": 81.897,
+      "p95_ms": 83.669,
+      "fps": 12.19,
+      "first_call_ms": null,
+      "max_abs_delta_vs_unoptimized": 1.4901161193847656e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU ENABLE_ALL intra=8,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 8,
+      "mean_ms": 96.539,
+      "p50_ms": 95.999,
+      "p95_ms": 111.096,
+      "fps": 10.36,
+      "first_call_ms": 101.954,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU ENABLE_ALL intra=2,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 2,
+      "mean_ms": 103.772,
+      "p50_ms": 103.427,
+      "p95_ms": 108.555,
+      "fps": 9.64,
+      "first_call_ms": 109.104,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU ENABLE_BASIC intra=2,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_BASIC",
+      "intra_op_threads": 2,
+      "mean_ms": 106.84,
+      "p50_ms": 106.64,
+      "p95_ms": 109.113,
+      "fps": 9.36,
+      "first_call_ms": 108.106,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU ENABLE_EXTENDED intra=2,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_EXTENDED",
+      "intra_op_threads": 2,
+      "mean_ms": 107.017,
+      "p50_ms": 106.866,
+      "p95_ms": 109.002,
+      "fps": 9.34,
+      "first_call_ms": 113.22,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU DISABLE_ALL intra=2,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_DISABLE_ALL",
+      "intra_op_threads": 2,
+      "mean_ms": 109.692,
+      "p50_ms": 109.468,
+      "p95_ms": 111.905,
+      "fps": 9.12,
+      "first_call_ms": 110.271,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": true,
+      "valid_optimization": true
+    },
+    {
+      "configuration": "CPU ENABLE_ALL intra=default,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": null,
+      "mean_ms": 113.323,
+      "p50_ms": 112.278,
+      "p95_ms": 139.983,
+      "fps": 8.82,
+      "first_call_ms": 97.846,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": false,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CPU ENABLE_ALL intra=4,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_ALL",
+      "intra_op_threads": 4,
+      "mean_ms": 128.321,
+      "p50_ms": 129.222,
+      "p95_ms": 140.264,
+      "fps": 7.79,
+      "first_call_ms": 133.249,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": false,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CPU DISABLE_ALL intra=4,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_DISABLE_ALL",
+      "intra_op_threads": 4,
+      "mean_ms": 129.52,
+      "p50_ms": 130.03,
+      "p95_ms": 138.964,
+      "fps": 7.72,
+      "first_call_ms": 132.383,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": false,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CPU ENABLE_EXTENDED intra=4,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_EXTENDED",
+      "intra_op_threads": 4,
+      "mean_ms": 129.862,
+      "p50_ms": 130.482,
+      "p95_ms": 140.081,
+      "fps": 7.7,
+      "first_call_ms": 138.128,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": false,
+      "valid_optimization": false
+    },
+    {
+      "configuration": "CPU ENABLE_BASIC intra=4,inter=default",
+      "provider": "CPUExecutionProvider",
+      "graph_optimization_level": "ORT_ENABLE_BASIC",
+      "intra_op_threads": 4,
+      "mean_ms": 129.894,
+      "p50_ms": 130.149,
+      "p95_ms": 140.351,
+      "fps": 7.7,
+      "first_call_ms": 129.578,
+      "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+      "parity_ok_1e-4": true,
+      "meets_target_111_462_ms": false,
+      "valid_optimization": false
+    }
+  ],
+  "title": "RT-DETR inference optimization",
+  "classification": "B_POTENTIALLY_VIABLE",
+  "classification_reason": "Meets the 111.462 ms target in every parity-valid configuration on development hardware (best 81.69 ms). Not A because no Edge hardware exists to verify compatibility with the actual target, and this sprint demonstrated within its own scope how badly an uncontrolled measurement environment can mislead.",
+  "measurement_class": "development",
+  "is_edge_target": false,
+  "headline_correction": {
+    "what": "Sprint 22's RT-DETR benchmark does not reproduce",
+    "sprint22_published_mean_ms": 473.42,
+    "sprint23_reproduction_mean_ms": 109.284,
+    "factor": 4.33,
+    "sprint22_p95_over_mean": 3.26,
+    "sprint23_p95_over_mean": 1.16,
+    "cause": "Sprint 22 launched the benchmark in the background and then ran the full test suite, ruff, mypy and documentation work on the same CPU. The 3.26x p95/mean skew is the signature of contention, not of the model.",
+    "also_wrong_in_sprint22": "the 'ONNX is 3.7x slower than PyTorch' finding \u2014 the clean ratio is 1.46x",
+    "baseline_not_silently_replaced": true
+  },
+  "best_valid_configuration": {
+    "configuration": "CoreMLExecutionProvider(MLComputeUnits=CPUOnly) ORT_ENABLE_ALL intra=8",
+    "mean_ms": 81.685,
+    "p95_ms": 87.574,
+    "max_abs_delta_vs_unoptimized": 1.4901161193847656e-06,
+    "parity_ok": true,
+    "meets_target": true
+  },
+  "best_portable_cpu_configuration": {
+    "configuration": "CPUExecutionProvider ORT_ENABLE_ALL intra=8",
+    "mean_ms": 96.539,
+    "p95_ms": 111.096,
+    "max_abs_delta_vs_unoptimized": 1.1920928955078125e-06,
+    "parity_ok": true,
+    "meets_target": true,
+    "note": "no Apple dependency; the portable answer"
+  },
+  "rejected_optimizations": [
+    {
+      "configuration": "CoreMLExecutionProvider default (ANE/GPU) intra=4",
+      "mean_ms": 34.221,
+      "why_rejected": "max abs output delta 0.9875 against FP32 \u2014 the Neural Engine and GPU paths compute in FP16. Guardian's export gate rejects at 1e-4 and Sprint 23 \u00a712 forbids changing confidence semantics. 2.4x faster and a different answer; on a detector that means a detection appearing or disappearing.",
+      "must_not_be_quoted_as_rtdetr_latency": true
+    }
+  ],
+  "thread_finding": {
+    "dominant_lever": "intra_op_threads",
+    "ordering_best_to_worst": [
+      "intra=8: 96.54",
+      "intra=2: 103.77",
+      "default: 113.32",
+      "intra=4: 128.32"
+    ],
+    "monotonic": false,
+    "note": "intra=4 is reproducibly worst across every optimization level, which points at this host's hybrid core layout (4 threads landing partly on efficiency cores) rather than at the model. It will not transfer to a homogeneous Edge CPU."
+  },
+  "graph_optimization_finding": {
+    "shape_arithmetic_nodes_before": 303,
+    "shape_arithmetic_nodes_after_extended": 2,
+    "nodes_before": 1944,
+    "nodes_after_extended": 563,
+    "latency_contribution_pct": 5.4,
+    "conclusion": "The exported graph's shape plumbing looked like the answer and is not: ORT folds it away before the first inference. Graph optimization level is worth about 5%; the expensive work is dense linear algebra."
+  },
+  "static_shapes": {
+    "already_static": true,
+    "input": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "output": [
+      1,
+      300,
+      6
+    ],
+    "action": "none \u2014 no dynamic-shape overhead left to remove, and no dynamic variant was built to compare against because inventing one to fill a table row would be measuring an artifact"
+  },
+  "fp16": {
+    "explicit_conversion_attempted": false,
+    "reason": "onnxconverter-common is not in Guardian's dependency set, and the CoreML ANE/GPU path already demonstrates FP16's effect on this model's outputs (max abs delta 0.9875). Adding a dependency to re-derive a known answer for a candidate-only experiment is not worth it.",
+    "verdict": "FP16 is not safe for this model without a per-layer sensitivity study"
+  },
+  "tensorrt": {
+    "attempted": false,
+    "reason": "no CUDA device and no Jetson; torch.cuda.is_available() is False"
+  },
+  "edge_hardware": {
+    "available": false,
+    "blocker": "No NVIDIA Jetson and no Intel N100. ADR-0020 \u00a73 already records this as a named blocker; RT-DETR makes it urgent because a transformer detector's cost profile on a GPU with fused attention kernels may differ substantially from an ARM CPU in either direction."
+  },
+  "coreml_partitioning": {
+    "nodes_in_graph": 631,
+    "nodes_supported_by_coreml": 503,
+    "partitions": 31,
+    "source": "ORT capability log",
+    "note": "128 nodes stay on CPU and the graph is cut into 31 pieces, each boundary a transfer \u2014 the CoreML figures are not clean-provider numbers even before the parity problem"
+  },
+  "memory": {
+    "rtdetr_onnx_cpu_mb": 616.61,
+    "sprint22_contended_mb": 718.08,
+    "yolox_tiny_416_mb": 348.92,
+    "model_file_mb": 76.343,
+    "caveat": "the profiling harness reports process peak RSS \u2014 a high-water mark across every configuration in one process \u2014 so the repeated 1143.64 MB in the raw matrix is not a per-configuration measurement and is not quoted as one"
+  },
+  "guardian_v1_reference": {
+    "mean_ms": 35.51,
+    "p95_ms": 39.82,
+    "source": "Sprint 20.2, not re-measured",
+    "caveat": "The Guardian v1 640 ONNX artifact is not on this machine (only the COCO 416 baseline is), so it could not be re-measured under identical conditions. It may carry the same contention risk this sprint found in Sprint 22. Re-measuring it on an idle machine is the cheapest way to make the comparison trustworthy."
+  },
+  "next_steps": [
+    "Re-measure Guardian v1 @640 on an idle machine \u2014 the comparison is currently between one clean number and one of unknown provenance.",
+    "Get Edge hardware. Every ranking here is a property of an M4 Max, including which thread count wins.",
+    "Only then consider training. Sprint 22's reason to wait ('13x outside budget') was wrong; the remaining reason is weaker: we do not know what it costs on the machine it would run on."
+  ],
+  "do_not": [
+    "deploy",
+    "promote",
+    "train",
+    "start Sprint 24"
+  ]
+}

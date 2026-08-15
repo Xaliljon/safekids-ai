@@ -25,3 +25,11 @@ class CompatibilityError(TrainingError):
 
 class PromotionError(TrainingError):
     """Promotion refused (no approval, failed gates, zoo conflict)."""
+
+
+class ProviderUnavailableError(TrainingError):
+    """A requested execution provider is not the one that would run.
+
+    ONNX Runtime warns and falls back to CPU rather than failing, so this
+    exists to turn a silent, mislabelled benchmark into a loud one.
+    """

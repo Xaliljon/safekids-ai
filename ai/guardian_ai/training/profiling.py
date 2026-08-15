@@ -35,6 +35,8 @@ from typing import Any
 
 import numpy as np
 
+from guardian_ai.training.errors import ProviderUnavailableError
+
 DEFAULT_WARMUP = 20
 """Discarded before timing. Deliberately larger than the gate's 5: on this
 class of machine the first ~10 calls are still settling."""
@@ -166,7 +168,18 @@ def _logical_cpus() -> int:
 
 
 def make_session(model_path: Path, config: RuntimeConfig) -> Any:
-    """Build a session for one configuration. Raises if unavailable."""
+    """Build a session for one configuration, or refuse.
+
+    ONNX Runtime does **not** fail on an unknown or unavailable execution
+    provider: it emits a `UserWarning` and quietly runs on CPU. A benchmark
+    built that way reports CPU latency under a CUDA or CoreML label, which
+    is worse than no benchmark — Sprint 23 §9 calls a silent fallback
+    invalid for production performance claims, and this is where it would
+    enter unnoticed.
+
+    So the session is checked after construction and the provider must
+    actually be there.
+    """
     import onnxruntime as ort
 
     options = ort.SessionOptions()
@@ -177,7 +190,16 @@ def make_session(model_path: Path, config: RuntimeConfig) -> Any:
         options.intra_op_num_threads = config.intra_op_threads
     if config.inter_op_threads is not None:
         options.inter_op_num_threads = config.inter_op_threads
-    return ort.InferenceSession(str(model_path), options, providers=[config.provider])
+    session = ort.InferenceSession(str(model_path), options, providers=[config.provider])
+    active = session.get_providers()
+    if config.provider not in active:
+        raise ProviderUnavailableError(
+            f"'{config.provider}' is not available: ONNX Runtime fell back to "
+            f"{active}. Available here: {ort.get_available_providers()}. A "
+            f"latency figure measured this way would be labelled with hardware "
+            f"that never ran it."
+        )
+    return session
 
 
 @dataclass(frozen=True)

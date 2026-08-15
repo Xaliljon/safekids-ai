@@ -129,3 +129,37 @@ the CPU execution provider is the constraint. TensorRT (Jetson) and OpenVINO
    latency clause measures what it claims to.
 4. Wire `StageTimer` through a full pipeline run, so the product's real
    end-to-end budget is measured rather than assumed from the model alone.
+
+## RT-DETR (Sprint 23)
+
+Full detail: `architecture/rtdetr-performance.md`. Three findings belong
+here because they are about Guardian's measurement practice, not about
+RT-DETR.
+
+**A benchmark on a busy machine is not a benchmark.** Sprint 22 published
+RT-DETR at 473.42 ms; the same harness on an idle host gives 109.28 ms. The
+benchmark had been backgrounded while the test suite, ruff and mypy ran
+alongside it. The tell was in the published numbers — p95/mean was 3.26×,
+where a clean run is 1.16× — and it was not read.
+
+Two rules follow, and both are free:
+
+- A latency benchmark gets the machine to itself.
+- **p95/mean is a validity check, not a statistic.** Above roughly 1.5× on a
+  steady-state loop, suspect the environment before the model.
+
+**Calibrate the harness against a published number first.** Sprint 23 ran
+YOLOX-tiny COCO @416 through its harness and got 17.54 ms against Sprint
+20.2's published 18.45 ms. Five percent. Every later figure inherits that
+credibility; without it they would be a new measurement regime rather than a
+comparison.
+
+**A faster provider can be computing something else.** CoreML's Neural
+Engine path runs RT-DETR at 34.22 ms — 2.4× the CPU figure — with a maximum
+output delta of **0.9875** against FP32, because it computes in FP16
+internally. On scores living in `[0,1]` that is a detection appearing or
+disappearing, not a rounding difference. Guardian's export gate rejects at
+`1e-4`, so the fastest configuration measured was disqualified rather than
+reported. **Any provider or precision change must pass the same parity gate
+as an export**, and a latency number without a parity number beside it is not
+yet a result.

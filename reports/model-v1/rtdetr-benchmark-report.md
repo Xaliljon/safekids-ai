@@ -1,8 +1,41 @@
 # RT-DETR Benchmark Report — Sprint 22
 
-**Result: integrated, licence-clear, converging — and 13.3× slower than
-Guardian v1 at matched input on the same host. Accuracy is unmeasured
-because the Guardian dataset is not on this machine.**
+> ## ⚠ CORRECTED BY SPRINT 23 — the latency figures below are wrong
+>
+> Every RT-DETR latency number in this report was measured on a **contended
+> CPU**: the benchmark ran in the background while the full test suite, ruff,
+> mypy and documentation work occupied the same machine. Sprint 23 reproduced
+> it with the identical harness on an idle host:
+>
+> | | this report | Sprint 23 reproduction |
+> |---|---:|---:|
+> | mean | 473.42 ms | **109.28 ms** |
+> | p95 | 1543.21 ms | **126.35 ms** |
+> | PyTorch mean | 127.68 ms | **66.08 ms** |
+> | p95 / mean | 3.26× | 1.16× |
+>
+> The 3.26× p95/mean skew was the tell and it was not read as one. The
+> "13.3× slower than Guardian v1" headline is wrong; the real ratio against
+> Guardian v1's published figure is about 2.9×, and RT-DETR's best
+> parity-valid configuration (**81.69 ms**) is *inside* Guardian's 111.462 ms
+> target.
+>
+> The "ONNX is 3.7× slower than PyTorch" finding was contention too — the
+> clean ratio is 1.46×.
+>
+> This report is left standing rather than rewritten, because what it
+> measured is part of the record. See
+> `reports/rtdetr/inference-optimization-report.md` for the corrected
+> numbers and the recommendation that replaces the one below.
+>
+> **Everything in this report that is not a latency measurement — the licence
+> audit, the integration, the convergence proof, the ONNX parity result —
+> stands unchanged.**
+
+**Result (as measured, since corrected): integrated, licence-clear,
+converging — and apparently 13.3× slower than Guardian v1 at matched input on
+the same host. Accuracy is unmeasured because the Guardian dataset is not on
+this machine.**
 
 ## 1. Executive summary
 
