@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 
 from guardian_ai.evaluation.detection import evaluate_detections
-from guardian_ai.training.config import TrainingConfig
+from guardian_ai.training.config import EarlyStoppingConfig, TrainingConfig
 from guardian_ai.training.data import RegistryDataModule
 from guardian_ai.training.errors import ExperimentError, TrainingConfigurationError
 from guardian_ai.training.experiment import Experiment
@@ -50,6 +50,40 @@ def _atomic_write_text(path: Path, text: str) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(text, encoding="utf-8")
     os.replace(tmp, path)
+
+
+_BOUNDED_METRICS = frozenset({"f1", "precision", "recall", "map50", "map50_95", "accuracy"})
+"""Metrics that cannot exceed 1.0, so "no improvement" at 1.0 is a ceiling."""
+
+_SATURATION_EPSILON = 1e-9
+
+
+def _improved(value: float, best: float | None, config: EarlyStoppingConfig) -> bool:
+    """Whether this epoch beat the best by enough to count.
+
+    ``min_delta`` guards the failure opposite to saturation: without it a
+    metric wobbling at the fifth decimal resets patience forever and the
+    run never stops. Zero preserves the historical behaviour.
+    """
+    if best is None:
+        return True
+    if config.mode == "max":
+        return value > best + config.min_delta
+    return value < best - config.min_delta
+
+
+def _is_saturated(metric: str, value: float, mode: str) -> bool:
+    """Is the metric pinned at a bound it cannot pass?
+
+    Only asked when patience has already expired. A saturated metric makes
+    "no improvement" true by arithmetic — the patience counter is measuring
+    the ceiling rather than the model, and the run may be cut while the
+    loss is still falling.
+    """
+    if metric not in _BOUNDED_METRICS:
+        return False
+    bound = 1.0 if mode == "max" else 0.0
+    return abs(value - bound) < _SATURATION_EPSILON
 
 
 class Trainer:
@@ -152,6 +186,7 @@ class Trainer:
             experiment.start()
             metric_name = config.early_stopping.metric
             stopped_early = False
+            stop_reason: str | None = None
 
             for epoch in range(start_epoch, config.epochs):
                 train_loss = self._train_epoch(
@@ -161,11 +196,7 @@ class Trainer:
                     scheduler.step()
                 evaluation = self.evaluate(model, config.dataset.val_split)
                 value = float(evaluation["overall"].get(metric_name, 0.0))
-                improved = best_value is None or (
-                    value > best_value
-                    if config.early_stopping.mode == "max"
-                    else value < best_value
-                )
+                improved = _improved(value, best_value, config.early_stopping)
                 if improved:
                     best_value = value
                     epochs_without_improvement = 0
@@ -210,6 +241,7 @@ class Trainer:
                     config.epochs,
                     stopped_early,
                     history,
+                    stop_reason=stop_reason,
                 )
                 experiment.update(epochs_completed=epoch + 1)
                 logger.info(
@@ -226,11 +258,29 @@ class Trainer:
                     and epochs_without_improvement >= config.early_stopping.patience
                 ):
                     stopped_early = True
-                    logger.info(
-                        "early stopping: no %s improvement for %d epoch(s)",
-                        metric_name,
-                        config.early_stopping.patience,
-                    )
+                    saturated = _is_saturated(metric_name, value, config.early_stopping.mode)
+                    if saturated:
+                        # "No improvement" at the ceiling is arithmetic, not
+                        # evidence. Sprint 20 stopped here with F1 pinned at
+                        # 1.0 while the training loss was still falling, and
+                        # working that out afterwards took a provenance
+                        # review. It is recorded now, at the moment it
+                        # happens, in the file the next person will read.
+                        logger.warning(
+                            "early stopping: %s is saturated at %.4f — patience measured the "
+                            "metric's ceiling, not the model. Loss may still be falling; "
+                            "re-run with a metric that has headroom before concluding "
+                            "the model converged.",
+                            metric_name,
+                            value,
+                        )
+                    else:
+                        logger.info(
+                            "early stopping: no %s improvement for %d epoch(s)",
+                            metric_name,
+                            config.early_stopping.patience,
+                        )
+                    stop_reason = "metric_saturated" if saturated else "no_improvement"
                     break
 
             final = self.evaluate(self._best_model(experiment, model), config.dataset.val_split)
@@ -239,6 +289,7 @@ class Trainer:
                     "val": final["overall"],
                     "best_" + metric_name: best_value,
                     "stopped_early": stopped_early,
+                    "stop_reason": stop_reason,
                 }
             )
             self._save_metrics(
@@ -250,6 +301,7 @@ class Trainer:
                 stopped_early,
                 history,
                 final["overall"],
+                stop_reason=stop_reason,
             )
             experiment.finish()
             return experiment
@@ -494,6 +546,7 @@ class Trainer:
         stopped_early: bool,
         history: list[dict[str, Any]],
         final_val: dict[str, Any] | None = None,
+        stop_reason: str | None = None,
     ) -> None:
         """Per-epoch metrics snapshot, flushed every epoch so a disconnect
         never loses the record of what has trained so far."""
@@ -503,6 +556,10 @@ class Trainer:
             "epochs_completed": epochs_completed,
             "epochs_planned": epochs_planned,
             "stopped_early": stopped_early,
+            # "metric_saturated" says the patience counter hit the metric's
+            # ceiling rather than the model's limit — a different fact from
+            # "no_improvement" and the one Sprint 20 needed a review to find.
+            "stop_reason": stop_reason,
             "history": history,
         }
         if final_val is not None:

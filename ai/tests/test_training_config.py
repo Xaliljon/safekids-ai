@@ -27,7 +27,10 @@ def test_minimal_config_gets_documented_defaults() -> None:
     assert config.optimizer.name == "adamw"
     assert config.scheduler.name == "cosine"
     assert config.scheduler.warmup_epochs == 0
-    assert config.early_stopping.metric == "f1"
+    # Changed from "f1" after Sprint 20: F1 saturated at 1.0 by epoch 3
+    # and the patience counter measured the ceiling, not the model.
+    assert config.early_stopping.metric == "map50_95"
+    assert config.early_stopping.min_delta == 0.0
     assert config.seed == 2026
     assert config.device == "cpu"
 

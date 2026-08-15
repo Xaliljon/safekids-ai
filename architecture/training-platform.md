@@ -363,3 +363,32 @@ build/loss/decode/export/checkpoint-loading, lazy video batching
 qualitative export, COCO-baseline decode math, and the CLI end to end on
 synthetic datasets. Coverage over the training/evaluation/export modules:
 95 %.
+
+## Early stopping (revised after Sprint 20)
+
+The default metric is **`map50_95`**, not `f1`.
+
+Sprint 20's run reached `val_f1 = 1.0` at epoch 3 and could go no higher, so
+"no improvement" was true from that point on by arithmetic rather than by
+the model having stopped learning. The patience counter measured the
+metric's ceiling. Training loss was still falling monotonically — 15.29 to
+1.88, still decreasing on the final epoch — when the run was cut at epoch
+13 of a planned 30. Whether more epochs would have helped is unknown and
+unknowable from that run, which is the point. mAP@50-95 averages over ten
+IoU thresholds and does not saturate at this difficulty.
+
+Two guards were added around it:
+
+- **`min_delta`** (default 0.0, historical behaviour) — how much better
+  counts as better. Above zero it stops noise-level wobble from resetting
+  patience forever, which is the failure opposite to saturation and just as
+  invisible in a metric plot.
+- **Saturation detection.** When patience expires on a bounded metric that
+  is sitting at its bound, the run logs a warning saying so and records
+  `stop_reason: "metric_saturated"` rather than `"no_improvement"` in
+  `metrics.json`. Those are different facts and the file used to conflate
+  them; separating them took a provenance review to do by hand once, and
+  should never need doing again.
+
+A config that names its metric explicitly is unaffected by the default
+change.

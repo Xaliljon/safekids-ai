@@ -16,6 +16,8 @@ from guardian_ai.training.engine import (
     METRICS_FILE,
     TRAINING_LOG,
     Trainer,
+    _improved,
+    _is_saturated,
 )
 from guardian_ai.training.errors import ExperimentError, TrainingConfigurationError
 from guardian_ai.training.experiment import Experiment
@@ -41,7 +43,7 @@ def test_smoke_training_produces_full_run(registry_root: Path, tmp_path: Path) -
     assert len(history) == 2
     assert history[0]["epoch"] == 0
     assert "train_loss" in history[0]
-    assert "val_f1" in history[0]
+    assert "val_map50_95" in history[0]
 
     metrics = experiment.record["metrics"]
     assert set(metrics["val"]) >= {
@@ -222,3 +224,51 @@ def test_reserved_family_cannot_reach_the_engine(registry_root: Path, tmp_path: 
 
     with pytest.raises(TrainingConfigurationError, match="reserved"):
         Trainer(config_from_dict(reserved))
+
+
+# ------------------------------------- early stopping: ceiling vs. plateau
+
+
+def test_min_delta_ignores_noise_level_improvement() -> None:
+    """Without it, a metric wobbling at the fifth decimal resets patience
+    forever — the failure opposite to saturation and just as invisible."""
+    config = EarlyStoppingConfig(metric="map50_95", mode="max", min_delta=0.001)
+    assert _improved(0.5011, 0.5000, config) is True
+    assert _improved(0.50005, 0.5000, config) is False
+
+
+def test_min_delta_zero_keeps_the_historical_behaviour() -> None:
+    config = EarlyStoppingConfig(metric="map50_95", mode="max", min_delta=0.0)
+    assert _improved(0.50001, 0.5000, config) is True
+    assert _improved(0.5000, 0.5000, config) is False
+
+
+def test_first_epoch_always_improves() -> None:
+    assert _improved(0.0, None, EarlyStoppingConfig(min_delta=0.5)) is True
+
+
+def test_min_mode_improves_downwards() -> None:
+    config = EarlyStoppingConfig(metric="loss", mode="min", min_delta=0.01)
+    assert _improved(0.90, 1.0, config) is True
+    assert _improved(0.999, 1.0, config) is False
+
+
+@pytest.mark.parametrize("metric", ["f1", "precision", "recall", "map50", "map50_95"])
+def test_bounded_metric_at_one_is_saturated(metric: str) -> None:
+    """Sprint 20's run, exactly: F1 pinned at 1.0 while the loss still fell.
+    "No improvement" there is arithmetic, not evidence."""
+    assert _is_saturated(metric, 1.0, "max") is True
+
+
+def test_bounded_metric_below_one_is_a_real_plateau() -> None:
+    assert _is_saturated("map50_95", 0.9999, "max") is False
+
+
+def test_unbounded_metric_is_never_called_saturated() -> None:
+    """Loss has no ceiling, so patience expiring on it means what it says."""
+    assert _is_saturated("loss", 1.0, "min") is False
+
+
+def test_min_mode_saturates_at_zero() -> None:
+    assert _is_saturated("f1", 0.0, "min") is True
+    assert _is_saturated("f1", 0.0001, "min") is False

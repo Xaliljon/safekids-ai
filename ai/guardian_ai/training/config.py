@@ -84,9 +84,26 @@ class AugmentationConfig:
 @dataclass(frozen=True, slots=True)
 class EarlyStoppingConfig:
     enabled: bool = True
-    metric: str = "f1"
+    metric: str = "map50_95"
+    """Default changed from ``f1`` after Sprint 20.
+
+    F1 reached 1.0 at epoch 3 of that run and could go no higher, so
+    "no improvement" was true from then on by arithmetic rather than by
+    the model having stopped learning — training loss was still falling
+    monotonically when the run was cut. mAP@50-95 averages over ten IoU
+    thresholds and does not saturate at this difficulty, so its patience
+    counter measures the model instead of the ceiling.
+
+    Existing configs that name a metric explicitly are unaffected."""
+
     mode: str = "max"
     patience: int = 5
+    min_delta: float = 0.0
+    """How much better counts as better.
+
+    Zero keeps the historical behaviour. Above zero it stops noise-level
+    wobble from resetting patience forever — the failure opposite to
+    saturation, and just as invisible in a metric plot."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +156,8 @@ class TrainingConfig:
             raise TrainingConfigurationError(f"early_stopping.mode must be one of {_ES_MODES}")
         if self.early_stopping.patience < 1:
             raise TrainingConfigurationError("early_stopping.patience must be >= 1")
+        if self.early_stopping.min_delta < 0.0:
+            raise TrainingConfigurationError("early_stopping.min_delta must be >= 0")
         if not (0.0 <= self.augmentation.horizontal_flip <= 1.0):
             raise TrainingConfigurationError("horizontal_flip must be a probability")
         if self.model.input_size < 32:
@@ -190,6 +209,7 @@ class TrainingConfig:
                 "enabled": self.early_stopping.enabled,
                 "metric": self.early_stopping.metric,
                 "mode": self.early_stopping.mode,
+                "min_delta": self.early_stopping.min_delta,
                 "patience": self.early_stopping.patience,
             },
             "seed": self.seed,
